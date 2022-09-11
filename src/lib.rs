@@ -139,7 +139,6 @@ mod tests {
     // for the macros
     use crate as mono_fmt;
 
-    use crate::arguments::DebugArg;
     use crate::format;
 
     #[test]
@@ -149,8 +148,8 @@ mod tests {
     }
 
     #[test]
-    fn debug() {
-        let result = format((DebugArg("uwu"),));
-        assert_eq!(result, "\"uwu\"");
+    fn display() {
+        let result = format!("{}", "uwu");
+        assert_eq!(result, "uwu");
     }
 }
