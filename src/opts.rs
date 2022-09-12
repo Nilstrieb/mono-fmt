@@ -1,3 +1,5 @@
+use crate::Formatter;
+
 pub enum Alignment {
     Left,
     Center,
@@ -24,8 +26,6 @@ pub trait FmtOpts {
         Self::Inner::fill()
     }
 }
-
-pub struct Default;
 
 mod never {
     use crate::FmtOpts;
@@ -64,59 +64,111 @@ impl FmtOpts for () {
         None
     }
 }
+pub struct WithAlternate<I>(pub I);
 
-macro_rules! with_fmts {
-    (@ty $ty:ty, $($tt:tt)*) => { $ty };
-    ($(struct $name:ident $(<const A: $param:ty>)? {
-        fn $override:ident() -> $override_ret:ty {
-            $($override_body:tt)*
-        }
-    })*) => {
-        $(
-            pub struct $name<I, $(const A: $param)?>(I);
+impl<I: FmtOpts> FmtOpts for WithAlternate<I> {
+    type Inner = I;
+    fn alternate() -> bool {
+        true
+    }
+}
+pub struct WithWidth<I, const A: usize>(pub I);
 
-            impl<I: FmtOpts, $(const A: $param)?> FmtOpts for $name<I, $(with_fmts!(@ty A, $param))?> {
-                type Inner = I;
+impl<I: FmtOpts, const A: usize> FmtOpts for WithWidth<I, A> {
+    type Inner = I;
+    fn width() -> Option<usize> {
+        Some(A)
+    }
+}
+pub struct WithLeftAlign<I>(pub I);
 
-                fn $override() -> $override_ret {
-                    $($override_body)*
-                }
-            }
-        )*
-    };
+impl<I: FmtOpts> FmtOpts for WithLeftAlign<I> {
+    type Inner = I;
+    fn align() -> Option<Alignment> {
+        Some(Alignment::Left)
+    }
+}
+pub struct WithRightAlign<I>(pub I);
 
-    (struct $name:ident) => {};
+impl<I: FmtOpts> FmtOpts for WithRightAlign<I> {
+    type Inner = I;
+    fn align() -> Option<Alignment> {
+        Some(Alignment::Right)
+    }
+}
+pub struct WithCenterAlign<I>(pub I);
+
+impl<I: FmtOpts> FmtOpts for WithCenterAlign<I> {
+    type Inner = I;
+    fn align() -> Option<Alignment> {
+        Some(Alignment::Center)
+    }
+}
+pub struct WithFill<I, const A: char>(pub I);
+
+impl<I: FmtOpts, const A: char> FmtOpts for WithFill<I, A> {
+    type Inner = I;
+    fn fill() -> Option<char> {
+        Some(A)
+    }
 }
 
-with_fmts! {
-    struct WithAlternate {
-        fn alternate() -> bool {
-            true
+impl<W, O: FmtOpts> Formatter<W, O> {
+    pub fn alternate(&self) -> bool {
+        O::alternate()
+    }
+
+    pub fn width() -> Option<usize> {
+        O::width()
+    }
+
+    pub fn align() -> Option<Alignment> {
+        O::align()
+    }
+
+    pub fn fill() -> Option<char> {
+        O::fill()
+    }
+
+    pub fn with_alternate(self) -> Formatter<W, WithAlternate<O>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithAlternate(self.opts),
         }
     }
-    struct WithWidth<const A: usize> {
-        fn width() -> Option<usize> {
-            Some(A)
+
+    pub fn with_width<const WIDTH: usize>(self) -> Formatter<W, WithWidth<O, WIDTH>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithWidth(self.opts),
         }
     }
-    struct WithLeftAlign {
-        fn align() -> Option<Alignment> {
-            Some(Alignment::Left)
+
+    pub fn with_left_align(self) -> Formatter<W, WithLeftAlign<O>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithLeftAlign(self.opts),
         }
     }
-    struct WithRightAlign {
-        fn align() -> Option<Alignment> {
-            Some(Alignment::Right)
+
+    pub fn with_right_align(self) -> Formatter<W, WithRightAlign<O>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithRightAlign(self.opts),
         }
     }
-    struct WithCenterAlign {
-        fn align() -> Option<Alignment> {
-            Some(Alignment::Center)
+
+    pub fn with_center_align(self) -> Formatter<W, WithCenterAlign<O>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithCenterAlign(self.opts),
         }
     }
-    struct WithFill<const A: char> {    
-        fn fill() -> Option<char> {
-            Some(A)
+
+    pub fn with_fill<const FILL: char>(self) -> Formatter<W, WithFill<O, FILL>> {
+        Formatter {
+            buf: self.buf,
+            opts: WithFill(self.opts),
         }
     }
 }

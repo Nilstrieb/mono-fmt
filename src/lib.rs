@@ -7,6 +7,7 @@ mod opts;
 mod write;
 
 pub use mono_fmt_macro::format_args;
+use opts::{WithAlternate, WithFill, WithWidth, WithLeftAlign, WithRightAlign, WithCenterAlign};
 
 pub use crate::args::Arguments;
 pub use crate::opts::FmtOpts;
