@@ -65,9 +65,9 @@ impl std::fmt::Debug for FmtPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
-            Self::Debug(arg0) => f.debug_tuple("Debug").finish(),
-            Self::Display(arg0) => f.debug_tuple("Display").finish(),
-            Self::Advanced(arg0, arg1) => f.debug_tuple("Advanced").field(arg0).finish(),
+            Self::Debug(_) => f.debug_tuple("Debug").finish(),
+            Self::Display(_) => f.debug_tuple("Display").finish(),
+            Self::Advanced(arg0, _) => f.debug_tuple("Advanced").field(arg0).finish(),
         }
     }
 }
@@ -234,7 +234,9 @@ impl ToTokens for FmtPart {
 pub fn format_args(tokens: TokenStream) -> TokenStream {
     let input = parse_macro_input!(tokens as Input);
 
-    parser::FmtSpecParser::new(&mut input.format_str.chars().peekable()).parse();
+    if false {
+        parser::FmtSpecParser::new(&mut input.format_str.chars().peekable()).parse().unwrap();
+    }
 
     let formatter = Formatter {
         string: input.format_str.chars().peekable(),

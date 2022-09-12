@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // for the test macro expansion
 #[cfg(test)]
 extern crate self as mono_fmt;
@@ -7,7 +9,6 @@ mod opts;
 mod write;
 
 pub use mono_fmt_macro::format_args;
-use opts::{WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth};
 
 pub use crate::args::Arguments;
 pub use crate::opts::FmtOpts;

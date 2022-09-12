@@ -80,7 +80,7 @@ pub fn ConstWidthArg<T, const WIDTH: usize>(value: T) -> ConstWidthArg<T, WIDTH>
 }
 
 impl<T: Display, const WIDTH: usize> Arguments for ConstWidthArg<T, WIDTH> {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+    fn fmt<W: Write, O: FmtOpts>(&self, _: &mut Formatter<W, O>) -> Result {
         todo!()
     }
 }
