@@ -3,11 +3,40 @@
 extern crate self as mono_fmt;
 
 pub use mono_fmt_macro::format_args;
-use std::fmt::{Error, Write};
 
 use crate::arguments::Arguments;
 
 pub type Result = std::result::Result<(), Error>;
+
+#[derive(Debug)]
+pub struct Error;
+
+pub trait Write {
+    fn write_str(&mut self, str: &str) -> Result;
+    fn write_char(&mut self, char: char) -> Result;
+}
+
+impl Write for String {
+    fn write_str(&mut self, str: &str) -> Result {
+        self.push_str(str);
+        Ok(())
+    }
+
+    fn write_char(&mut self, char: char) -> Result {
+        self.push(char);
+        Ok(())
+    }
+}
+
+impl<W: Write> Write for &mut W {
+    fn write_str(&mut self, str: &str) -> Result {
+        <W as Write>::write_str(self, str)
+    }
+
+    fn write_char(&mut self, char: char) -> Result {
+        <W as Write>::write_char(self, char)
+    }
+}
 
 trait Debug {
     fn fmt<W: Write>(&self, f: &mut Formatter<W>) -> Result;
@@ -59,8 +88,7 @@ pub fn format<A: Arguments>(args: A) -> String {
 }
 
 mod arguments {
-    use crate::{Debug, Display, Formatter, Result};
-    use std::fmt::Write;
+    use crate::{Debug, Display, Formatter, Result, Write};
     pub trait Arguments {
         fn fmt<W: Write>(&self, f: &mut Formatter<W>) -> Result;
     }
@@ -140,7 +168,6 @@ macro_rules! format {
 
 #[cfg(test)]
 mod tests {
-
     use crate::format;
 
     #[test]
@@ -161,7 +188,6 @@ mod tests {
         assert_eq!(result, "oowuwu omg");
     }
 
-    
     #[test]
     fn debug() {
         let result = format!("test {:?} hello", "uwu");
