@@ -11,6 +11,8 @@ use syn::{
     Expr, LitStr, Token,
 };
 
+// TODO: Rewrite using state machine please
+
 struct Input {
     format_str: String,
     exprs: Punctuated<Expr, Token![,]>,
@@ -43,10 +45,48 @@ impl Parse for Input {
     }
 }
 
+#[derive(Debug, PartialEq)]
+struct Advanced {
+    width: Option<usize>,
+    fill: Option<char>,
+    align: Option<Alignment>,
+}
+
 enum FmtPart {
     Literal(String),
     Debug(Expr),
     Display(Expr),
+    Advanced(Advanced, Expr),
+}
+
+impl std::fmt::Debug for FmtPart {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
+            Self::Debug(arg0) => f.debug_tuple("Debug").finish(),
+            Self::Display(arg0) => f.debug_tuple("Display").finish(),
+            Self::Advanced(arg0, arg1) => f.debug_tuple("Advanced").field(arg0).finish(),
+        }
+    }
+}
+
+impl PartialEq for FmtPart {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Literal(a), Self::Literal(b)) => a == b,
+            (Self::Debug(_), Self::Debug(_)) => true,
+            (Self::Display(_), Self::Display(_)) => true,
+            (Self::Advanced(a, _), Self::Advanced(b, _)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Alignment {
+    Left,
+    Center,
+    Right,
 }
 
 struct Formatter<'a, I> {
@@ -59,7 +99,6 @@ impl<'a, I> Formatter<'a, I>
 where
     I: Iterator<Item = Expr>,
 {
-    
     fn expect_expr(&mut self) -> Expr {
         self.exprs
             .next()
@@ -77,30 +116,19 @@ where
         }
     }
 
+    fn eat(&mut self, char: char) -> bool {
+        if self.string.peek() == Some(&char) {
+            self.string.next();
+            return true;
+        }
+        false
+    }
+
     fn parse(mut self) -> Vec<FmtPart> {
         let mut next_string = String::new();
         while let Some(char) = self.string.next() {
             match char {
-                '{' => match self.string.next() {
-                    Some('}') => {
-                        self.save_string(std::mem::take(&mut next_string));
-                        let expr = self.expect_expr();
-                        self.fmt_parts.push(FmtPart::Display(expr));
-                    }
-                    Some(':') => {
-                        self.save_string(std::mem::take(&mut next_string));
-                        self.expect_char('?');
-                        self.expect_char('}');
-                        let expr = self.expect_expr();
-                        self.fmt_parts.push(FmtPart::Debug(expr))
-                    }
-                    Some(other) => {
-                        panic!("expected }}, found '{}'", other)
-                    }
-                    None => {
-                        panic!("expected '}}'")
-                    }
-                },
+                '{' => self.fmt_part(&mut next_string),
                 other => {
                     next_string.push(other);
                 }
@@ -109,6 +137,65 @@ where
         self.save_string(next_string);
 
         self.fmt_parts
+    }
+
+    fn fmt_part(&mut self, next_string: &mut String) {
+        match self.string.next() {
+            Some('}') => {
+                self.save_string(std::mem::take(next_string));
+                let expr = self.expect_expr();
+                self.fmt_parts.push(FmtPart::Display(expr));
+            }
+            Some(':') => {
+                self.save_string(std::mem::take(next_string));
+
+                if self.eat('?') {
+                    let expr = self.expect_expr();
+                    self.fmt_parts.push(FmtPart::Debug(expr));
+                } else {
+                    let mut advanced = Advanced {
+                        width: None,
+                        fill: None,
+                        align: None,
+                    };
+                    self.advanced_fmt(&mut advanced, true);
+                    let expr = self.expect_expr();
+                    self.fmt_parts.push(FmtPart::Advanced(advanced, expr));
+                }
+
+                self.expect_char('}');
+            }
+            Some(other) => {
+                panic!("expected }}, found '{}'", other)
+            }
+            None => {
+                panic!("expected '}}'")
+            }
+        }
+    }
+
+    fn advanced_fmt(&mut self, advanced: &mut Advanced, allow_fill: bool) {
+        match self.string.next().expect("expected something after {:") {
+            '?' => unreachable!(),
+            '<' => {
+                advanced.align = Some(Alignment::Left);
+            }
+            '>' => {
+                advanced.align = Some(Alignment::Right);
+            }
+            '^' => {
+                advanced.align = Some(Alignment::Center);
+            }
+            fill if allow_fill => {
+                advanced.fill = Some(fill);
+                self.advanced_fmt(advanced, false)
+            }
+            char => panic!("invalid char {char}"),
+        }
+
+        if let Some(width) = self.string.next() {
+            advanced.width = Some(width.to_string().parse().unwrap());
+        }
     }
 
     fn save_string(&mut self, string: String) {
@@ -132,6 +219,9 @@ impl ToTokens for FmtPart {
             FmtPart::Debug(expr) => {
                 quote! { ::mono_fmt::_private::DebugArg(#expr) }
             }
+            FmtPart::Advanced(_, _) => {
+                todo!()
+            }
         };
 
         tokens.extend(own_tokens);
@@ -154,4 +244,45 @@ pub fn format_args(tokens: TokenStream) -> TokenStream {
         (#(#fmt_parts),*,)
     }
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use syn::Expr;
+
+    use crate::{Advanced, Alignment, FmtPart};
+
+    fn fake_expr() -> Expr {
+        syn::parse_str("1").unwrap()
+    }
+
+    fn fake_exprs(count: usize) -> Vec<Expr> {
+        vec![fake_expr(); count]
+    }
+
+    fn run_test(string: &str, expr_count: usize) -> Vec<FmtPart> {
+        let fmt = super::Formatter {
+            string: string.chars().peekable(),
+            exprs: fake_exprs(expr_count).into_iter(),
+            fmt_parts: Vec::new(),
+        };
+        fmt.parse()
+    }
+
+    #[test]
+    fn parse_fmt() {
+        let string = "{:<5}";
+        let parts = run_test(string, 1);
+        assert_eq!(
+            parts,
+            vec![FmtPart::Advanced(
+                Advanced {
+                    width: Some(5),
+                    fill: None,
+                    align: Some(Alignment::Left),
+                },
+                fake_expr()
+            )]
+        );
+    }
 }

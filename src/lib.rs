@@ -7,7 +7,7 @@ mod opts;
 mod write;
 
 pub use mono_fmt_macro::format_args;
-use opts::{WithAlternate, WithFill, WithWidth, WithLeftAlign, WithRightAlign, WithCenterAlign};
+use opts::{WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth};
 
 pub use crate::args::Arguments;
 pub use crate::opts::FmtOpts;
@@ -94,7 +94,11 @@ pub fn format<A: Arguments>(args: A) -> String {
 }
 
 mod _private {
-    pub use super::args::{ConstWidthArg, DebugArg, DisplayArg, Str};
+    pub use crate::args::{ConstWidthArg, DebugArg, DisplayArg, Str};
+
+    pub use crate::opts::{
+        WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth,
+    };
 }
 
 #[macro_export]
