@@ -11,6 +11,8 @@ use syn::{
     Expr, LitStr, Token,
 };
 
+mod parser;
+
 // TODO: Rewrite using state machine please
 
 struct Input {
