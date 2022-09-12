@@ -36,13 +36,13 @@ pub struct FmtSpec {
     kind: FmtType,
 }
 
-struct FmtSpecParser<'a> {
+pub struct FmtSpecParser<'a> {
     chars: &'a mut Peekable<Chars<'a>>,
     state: State,
     argument: FmtSpec,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum State {
     Initial,
     Argument,
@@ -66,14 +66,71 @@ impl<'a> FmtSpecParser<'a> {
         }
     }
 
-    fn parse(mut self) -> Result<FmtSpec, ()> {
+    pub fn parse(mut self) -> Result<FmtSpec, ()> {
         while self.state != State::Done {
             self.step()?;
         }
         Ok(self.argument)
     }
 
+    fn next(&mut self) -> Option<char> {
+        self.chars.next()
+    }
+
+    fn peek(&mut self) -> Option<char> {
+        self.chars.peek().copied()
+    }
+
+    fn eat(&mut self, char: char) -> bool {
+        if self.peek() == Some(char) {
+            self.next();
+            return true;
+        }
+        false
+    }
+
+    fn eat_until(&mut self, char: char) -> Option<String> {
+        let mut string = String::new();
+        let mut has_char = false;
+        while self.peek() != Some(char) {
+            self.next();
+            string.push(char);
+            has_char = true;
+        }
+        has_char.then_some(string)
+    }
+
     fn step(&mut self) -> Result<(), ()> {
-        todo!()
+        match self.state {
+            State::Initial => {
+                let argument = if let Some(arg) = self.eat_until(':') {
+                    if let Ok(num) = arg.parse() {
+                        Argument::PositionalExplicit(num)
+                    } else {
+                        Argument::Keyword(arg)
+                    }
+                } else {
+                    Argument::Positional
+                };
+
+                self.argument.arg = argument;
+                self.state = State::Argument;
+
+                if !self.eat(':') {
+                    return Err(());
+                }
+
+                Ok(())
+            }
+            State::Argument => todo!(),
+            State::Fill => todo!(),
+            State::Align => todo!(),
+            State::Sign => todo!(),
+            State::Zero => todo!(),
+            State::Width => todo!(),
+            State::Precision => todo!(),
+            State::Type => todo!(),
+            State::Done => unreachable!(),
+        }
     }
 }

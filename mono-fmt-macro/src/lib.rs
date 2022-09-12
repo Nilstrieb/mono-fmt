@@ -234,6 +234,8 @@ impl ToTokens for FmtPart {
 pub fn format_args(tokens: TokenStream) -> TokenStream {
     let input = parse_macro_input!(tokens as Input);
 
+    parser::FmtSpecParser::new(&mut input.format_str.chars().peekable()).parse();
+
     let formatter = Formatter {
         string: input.format_str.chars().peekable(),
         exprs: input.exprs.into_iter(),
