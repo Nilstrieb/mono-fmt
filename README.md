@@ -1,2 +1,2 @@
 # mono-fmt
-oh yes
+`core::fmt` with a bigger code size (and more types!)
