@@ -1,3 +1,4 @@
+use core::panic;
 use std::{iter::Peekable, str::Chars};
 
 use proc_macro::TokenStream;
@@ -58,21 +59,48 @@ impl<'a, I> Formatter<'a, I>
 where
     I: Iterator<Item = Expr>,
 {
+    
+    fn expect_expr(&mut self) -> Expr {
+        self.exprs
+            .next()
+            .expect("missing argument for display formatting")
+    }
+
+    fn expect_char(&mut self, char: char) {
+        let next = self.string.next();
+        if next != Some(char) {
+            panic!(
+                "expected {char}, found {}",
+                next.map(|c| c.to_string())
+                    .unwrap_or_else(|| "end of input".to_string())
+            );
+        }
+    }
+
     fn parse(mut self) -> Vec<FmtPart> {
         let mut next_string = String::new();
         while let Some(char) = self.string.next() {
             match char {
-                '{' => {
-                    self.save_string(std::mem::take(&mut next_string));
-                    if self.string.next() != Some('}') {
-                        panic!("only supports display formatting!");
+                '{' => match self.string.next() {
+                    Some('}') => {
+                        self.save_string(std::mem::take(&mut next_string));
+                        let expr = self.expect_expr();
+                        self.fmt_parts.push(FmtPart::Display(expr));
                     }
-                    let expr = self
-                        .exprs
-                        .next()
-                        .expect("missing argument for display formatting");
-                    self.fmt_parts.push(FmtPart::Display(expr));
-                }
+                    Some(':') => {
+                        self.save_string(std::mem::take(&mut next_string));
+                        self.expect_char('?');
+                        self.expect_char('}');
+                        let expr = self.expect_expr();
+                        self.fmt_parts.push(FmtPart::Debug(expr))
+                    }
+                    Some(other) => {
+                        panic!("expected }}, found '{}'", other)
+                    }
+                    None => {
+                        panic!("expected '}}'")
+                    }
+                },
                 other => {
                     next_string.push(other);
                 }
@@ -96,13 +124,13 @@ impl ToTokens for FmtPart {
         let own_tokens = match self {
             FmtPart::Literal(lit) => {
                 let literal = LitStr::new(lit, Span::call_site());
-                quote! { mono_fmt::_private::Str(#literal) }
+                quote! { ::mono_fmt::_private::Str(#literal) }
             }
             FmtPart::Display(expr) => {
-                quote! { mono_fmt::_private::DisplayArg(#expr) }
+                quote! { ::mono_fmt::_private::DisplayArg(#expr) }
             }
             FmtPart::Debug(expr) => {
-                quote! { mono_fmt::_private::DebugArg(#expr) }
+                quote! { ::mono_fmt::_private::DebugArg(#expr) }
             }
         };
 

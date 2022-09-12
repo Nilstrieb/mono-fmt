@@ -1,3 +1,7 @@
+// for the test macro expansion
+#[cfg(test)]
+extern crate self as mono_fmt;
+
 pub use mono_fmt_macro::format_args;
 use std::fmt::{Error, Write};
 
@@ -136,8 +140,6 @@ macro_rules! format {
 
 #[cfg(test)]
 mod tests {
-    // for the macros
-    use crate as mono_fmt;
 
     use crate::format;
 
@@ -151,5 +153,18 @@ mod tests {
     fn display() {
         let result = format!("{}", "uwu");
         assert_eq!(result, "uwu");
+    }
+
+    #[test]
+    fn display_with_strings() {
+        let result = format!("oow{} omg", "uwu");
+        assert_eq!(result, "oowuwu omg");
+    }
+
+    
+    #[test]
+    fn debug() {
+        let result = format!("test {:?} hello", "uwu");
+        assert_eq!(result, r#"test "uwu" hello"#);
     }
 }
