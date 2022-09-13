@@ -161,6 +161,12 @@ mod tests {
         let result = format!("test {:?} hello", "uwu");
         assert_eq!(result, r#"test "uwu" hello"#);
     }
+
+    #[test]
+    fn number() {
+        let result = format!("a: {}", 32523532u64);
+        assert_eq!(result, "a: 32523532");
+    }
 }
 
 fn f() {

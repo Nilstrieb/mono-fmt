@@ -6,116 +6,7 @@ use std::{
     ptr, slice, str,
 };
 
-use crate::{self as fmt, FmtOpts, Write};
-
-mod numfmt {
-    //! Shared utilities used by both float and integer formatting.
-
-    /// Formatted parts.
-    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-    pub enum Part<'a> {
-        /// Given number of zero digits.
-        Zero(usize),
-        /// A literal number up to 5 digits.
-        Num(u16),
-        /// A verbatim copy of given bytes.
-        Copy(&'a [u8]),
-    }
-
-    impl<'a> Part<'a> {
-        /// Returns the exact byte length of given part.
-        pub fn len(&self) -> usize {
-            match *self {
-                Part::Zero(nzeroes) => nzeroes,
-                Part::Num(v) => {
-                    if v < 1_000 {
-                        if v < 10 {
-                            1
-                        } else if v < 100 {
-                            2
-                        } else {
-                            3
-                        }
-                    } else {
-                        if v < 10_000 {
-                            4
-                        } else {
-                            5
-                        }
-                    }
-                }
-                Part::Copy(buf) => buf.len(),
-            }
-        }
-
-        /// Writes a part into the supplied buffer.
-        /// Returns the number of written bytes, or `None` if the buffer is not enough.
-        /// (It may still leave partially written bytes in the buffer; do not rely on that.)
-        pub fn write(&self, out: &mut [u8]) -> Option<usize> {
-            let len = self.len();
-            if out.len() >= len {
-                match *self {
-                    Part::Zero(nzeroes) => {
-                        for c in &mut out[..nzeroes] {
-                            *c = b'0';
-                        }
-                    }
-                    Part::Num(mut v) => {
-                        for c in out[..len].iter_mut().rev() {
-                            *c = b'0' + (v % 10) as u8;
-                            v /= 10;
-                        }
-                    }
-                    Part::Copy(buf) => {
-                        out[..buf.len()].copy_from_slice(buf);
-                    }
-                }
-                Some(len)
-            } else {
-                None
-            }
-        }
-    }
-
-    /// Formatted result containing one or more parts.
-    /// This can be written to the byte buffer or converted to the allocated string.
-    #[allow(missing_debug_implementations)]
-    #[derive(Clone)]
-    pub struct Formatted<'a> {
-        /// A byte slice representing a sign, either `""`, `"-"` or `"+"`.
-        pub sign: &'static str,
-        /// Formatted parts to be rendered after a sign and optional zero padding.
-        pub parts: &'a [Part<'a>],
-    }
-
-    impl<'a> Formatted<'a> {
-        /// Returns the exact byte length of combined formatted result.
-        pub fn len(&self) -> usize {
-            let mut len = self.sign.len();
-            for part in self.parts {
-                len += part.len();
-            }
-            len
-        }
-
-        /// Writes all formatted parts into the supplied buffer.
-        /// Returns the number of written bytes, or `None` if the buffer is not enough.
-        /// (It may still leave partially written bytes in the buffer; do not rely on that.)
-        pub fn write(&self, out: &mut [u8]) -> Option<usize> {
-            if out.len() < self.sign.len() {
-                return None;
-            }
-            out[..self.sign.len()].copy_from_slice(self.sign.as_bytes());
-
-            let mut written = self.sign.len();
-            for part in self.parts {
-                let len = part.write(&mut out[written..])?;
-                written += len;
-            }
-            Some(written)
-        }
-    }
-}
+use crate::{self as fmt, std_impl::numfmt, FmtOpts, Write};
 
 #[doc(hidden)]
 trait DisplayInt:
@@ -215,10 +106,7 @@ trait GenericRadix: Sized {
         // SAFETY: The only chars in `buf` are created by `Self::digit` which are assumed to be
         // valid UTF-8
         let buf = unsafe {
-            str::from_utf8_unchecked(slice::from_raw_parts(
-                MaybeUninit::slice_as_ptr(buf),
-                buf.len(),
-            ))
+            str::from_utf8_unchecked(slice::from_raw_parts(buf.as_ptr().cast(), buf.len()))
         };
         f.pad_integral(is_nonnegative, Self::PREFIX, buf)
     }
@@ -323,7 +211,7 @@ macro_rules! impl_Display {
             // 2^128 is about 3*10^38, so 39 gives an extra byte of space
             let mut buf = [MaybeUninit::<u8>::uninit(); 39];
             let mut curr = buf.len() as isize;
-            let buf_ptr = MaybeUninit::slice_as_mut_ptr(&mut buf);
+            let buf_ptr = buf.as_mut_ptr().cast::<u8>();
             let lut_ptr = DEC_DIGITS_LUT.as_ptr();
 
             // SAFETY: Since `d1` and `d2` are always less than or equal to `198`, we
@@ -451,7 +339,7 @@ macro_rules! impl_Exp {
             // that `curr >= 0`.
             let mut buf = [MaybeUninit::<u8>::uninit(); 40];
             let mut curr = buf.len() as isize; //index for buf
-            let buf_ptr = MaybeUninit::slice_as_mut_ptr(&mut buf);
+            let buf_ptr = buf.as_mut_ptr().cast::<u8>();
             let lut_ptr = DEC_DIGITS_LUT.as_ptr();
 
             // decode 2 chars at a time
@@ -499,7 +387,7 @@ macro_rules! impl_Exp {
 
             // stores 'e' (or 'E') and the up to 2-digit exponent
             let mut exp_buf = [MaybeUninit::<u8>::uninit(); 3];
-            let exp_ptr = MaybeUninit::slice_as_mut_ptr(&mut exp_buf);
+            let exp_ptr = exp_buf.as_mut_ptr().cast::<u8>();
             // SAFETY: In either case, `exp_buf` is written within bounds and `exp_ptr[..len]`
             // is contained within `exp_buf` since `len <= 3`.
             let exp_slice = unsafe {
@@ -589,7 +477,7 @@ impl_Exp!(i128, u128 as u128 via to_u128 named exp_u128);
 
 /// Helper function for writing a u64 into `buf` going from last to first, with `curr`.
 fn parse_u64_into<const N: usize>(mut n: u64, buf: &mut [MaybeUninit<u8>; N], curr: &mut isize) {
-    let buf_ptr = MaybeUninit::slice_as_mut_ptr(buf);
+    let buf_ptr = buf.as_mut_ptr().cast::<u8>();
     let lut_ptr = DEC_DIGITS_LUT.as_ptr();
     assert!(*curr > 19);
 
@@ -716,7 +604,7 @@ fn fmt_u128<W: Write, O: FmtOpts>(
         // remaining since it has length 39
         unsafe {
             ptr::write_bytes(
-                MaybeUninit::slice_as_mut_ptr(&mut buf).offset(target),
+                buf.as_mut_ptr().cast::<u8>().offset(target),
                 b'0',
                 (curr - target) as usize,
             );
@@ -730,7 +618,7 @@ fn fmt_u128<W: Write, O: FmtOpts>(
             let target = (buf.len() - 38) as isize;
             // The raw `buf_ptr` pointer is only valid until `buf` is used the next time,
             // buf `buf` is not used in this scope so we are good.
-            let buf_ptr = MaybeUninit::slice_as_mut_ptr(&mut buf);
+            let buf_ptr = buf.as_mut_ptr().cast::<u8>();
             // SAFETY: At this point we wrote at most 38 bytes, pad up to that point,
             // There can only be at most 1 digit remaining.
             unsafe {
@@ -745,7 +633,7 @@ fn fmt_u128<W: Write, O: FmtOpts>(
     // UTF-8 since `DEC_DIGITS_LUT` is
     let buf_slice = unsafe {
         str::from_utf8_unchecked(slice::from_raw_parts(
-            MaybeUninit::slice_as_mut_ptr(&mut buf).offset(curr),
+            buf.as_mut_ptr().cast::<u8>().offset(curr),
             buf.len() - curr as usize,
         ))
     };
