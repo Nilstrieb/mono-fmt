@@ -1,13 +1,18 @@
 #![allow(dead_code)]
 
-// for the test macro expansion
-extern crate self as mono_fmt;
-
 mod args;
 mod opts;
 mod write;
 
-pub use mono_fmt_macro::format_args;
+#[doc(hidden)]
+pub use mono_fmt_macro::__format_args;
+
+#[macro_export]
+macro_rules! format_args {
+    ($($tt:tt)*) => {
+        $crate::__format_args!($crate $($tt)*)
+    };
+}
 
 pub use crate::args::Arguments;
 pub use crate::opts::FmtOpts;
@@ -136,7 +141,6 @@ mod tests {
         assert_eq!(result, r#"test "uwu" hello"#);
     }
 }
-
 
 fn f() {
     crate::format!("uwu, {f:_<?}", "what");

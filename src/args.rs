@@ -50,17 +50,17 @@ impl Arguments for Str {
     }
 }
 
-pub struct DebugArg<T>(pub T);
+pub struct DebugArg<T, O>(pub T, pub PhantomData<O>);
 
-impl<T: Debug> Arguments for DebugArg<T> {
+impl<T: Debug, OutOpt> Arguments for DebugArg<T, OutOpt> {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
         Debug::fmt(&self.0, f)
     }
 }
 
-pub struct DisplayArg<T>(pub T);
+pub struct DisplayArg<T, O>(pub T, pub PhantomData<O>);
 
-impl<T: Display> Arguments for DisplayArg<T> {
+impl<T: Display, OutOpt> Arguments for DisplayArg<T, OutOpt> {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
         Display::fmt(&self.0, f)
     }

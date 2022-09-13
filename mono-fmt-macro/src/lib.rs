@@ -9,12 +9,13 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     punctuated::Punctuated,
-    Expr, LitStr, Token,
+    Expr, Ident, LitStr, Token,
 };
 
 mod parser;
 
 struct Input {
+    crate_ident: Ident,
     format_str: String,
     str_span: Span,
     exprs: Punctuated<Expr, Token![,]>,
@@ -22,6 +23,7 @@ struct Input {
 
 impl Parse for Input {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let crate_ident = input.parse()?;
         let first = input.parse::<syn::LitStr>()?;
 
         let mut exprs = Punctuated::new();
@@ -41,6 +43,7 @@ impl Parse for Input {
         }
 
         Ok(Self {
+            crate_ident,
             format_str: first.value(),
             str_span: first.span(),
             exprs,
@@ -49,15 +52,15 @@ impl Parse for Input {
 }
 
 enum FmtPart {
-    Literal(String),
-    Spec(FmtSpec, Expr),
+    Literal(Ident, String),
+    Spec(Ident, FmtSpec, Expr),
 }
 
 impl std::fmt::Debug for FmtPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
-            Self::Spec(spec, _) => f.debug_tuple("Spec").field(spec).finish(),
+            Self::Literal(_, arg0) => f.debug_tuple("Literal").field(arg0).finish(),
+            Self::Spec(_, spec, _) => f.debug_tuple("Spec").field(spec).finish(),
         }
     }
 }
@@ -65,8 +68,8 @@ impl std::fmt::Debug for FmtPart {
 impl PartialEq for FmtPart {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::Spec(a, _), Self::Spec(b, _)) => a == b,
+            (Self::Literal(_, a), Self::Literal(_, b)) => a == b,
+            (Self::Spec(_ ,a, _), Self::Spec(_, b, _)) => a == b,
             _ => false,
         }
     }
@@ -74,6 +77,7 @@ impl PartialEq for FmtPart {
 
 struct Formatter<'a, I> {
     string: PeekMoreIterator<Chars<'a>>,
+    crate_ident: Ident,
     exprs: I,
     fmt_parts: Vec<FmtPart>,
 }
@@ -96,7 +100,8 @@ where
                     self.save_string(std::mem::take(&mut next_string));
                     let argument = self.fmt_spec()?;
                     let expr = self.expect_expr();
-                    self.fmt_parts.push(FmtPart::Spec(argument, expr));
+                    self.fmt_parts
+                        .push(FmtPart::Spec(self.crate_ident.clone(), argument, expr));
                 }
                 other => {
                     next_string.push(other);
@@ -117,7 +122,8 @@ where
         if string.is_empty() {
             return;
         }
-        self.fmt_parts.push(FmtPart::Literal(string));
+        self.fmt_parts
+            .push(FmtPart::Literal(self.crate_ident.clone(), string));
     }
 }
 
@@ -134,25 +140,25 @@ impl ToTokens for Alignment {
 impl ToTokens for FmtPart {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let own_tokens = match self {
-            FmtPart::Literal(lit) => {
+            FmtPart::Literal(crate_ident, lit) => {
                 let literal = LitStr::new(lit, Span::call_site());
-                quote! { ::mono_fmt::_private::Str(#literal) }
+                quote! { #crate_ident::_private::Str(#literal) }
             }
-            FmtPart::Spec(spec, expr) => {
-                let mut tokens = expr.to_token_stream();
+            FmtPart::Spec(crate_ident, spec, expr) => {
+                let mut opt_toks = quote! { () };
 
                 // FIXME: Wait no we want `DebugArg::<WithUwu<WithOwo<()>>>(expr)`
 
                 if let Some(align) = &spec.align {
                     if let Some(fill) = align.fill {
-                        tokens = quote! { ::mono_fmt::_private::WithFill::<_, #fill>(#tokens) };
+                        opt_toks = quote! { #crate_ident::_private::WithFill<#opt_toks, #fill> };
                     }
                     let alignment = align.kind;
-                    tokens = quote! { ::mono_fmt::_private::#alignment(#tokens) };
+                    opt_toks = quote! { #crate_ident::_private::#alignment<#opt_toks> };
                 }
 
                 if spec.alternate {
-                    tokens = quote! { ::mono_fmt::_private::WithAlternate(#tokens) };
+                    opt_toks = quote! { #crate_ident::_private::WithAlternate<_, #opt_toks };
                 }
 
                 if spec.zero {
@@ -169,10 +175,10 @@ impl ToTokens for FmtPart {
 
                 match spec.kind {
                     FmtType::Default => quote! {
-                        ::mono_fmt::_private::DisplayArg(#tokens)
+                        #crate_ident::_private::DisplayArg::<_, #opt_toks>(#expr, ::std::marker::PhantomData)
                     },
                     FmtType::Debug => quote! {
-                        ::mono_fmt::_private::DebugArg(#tokens)
+                        #crate_ident::_private::DebugArg::<_, #opt_toks>(#expr, ::std::marker::PhantomData)
                     },
                     _ => todo!(),
                 }
@@ -184,11 +190,12 @@ impl ToTokens for FmtPart {
 }
 
 #[proc_macro]
-pub fn format_args(tokens: TokenStream) -> TokenStream {
+pub fn __format_args(tokens: TokenStream) -> TokenStream {
     let input = parse_macro_input!(tokens as Input);
 
     let formatter = Formatter {
         string: input.format_str.chars().peekmore(),
+        crate_ident: input.crate_ident,
         exprs: input.exprs.into_iter(),
         fmt_parts: Vec::new(),
     };
@@ -211,6 +218,7 @@ pub fn format_args(tokens: TokenStream) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use peekmore::PeekMore;
+    use proc_macro2::{Ident, Span};
     use syn::Expr;
 
     use crate::{
@@ -226,9 +234,14 @@ mod tests {
         vec![fake_expr(); count]
     }
 
+    fn crate_ident() -> Ident {
+        Ident::new("mono_fmt", Span::call_site())
+    }
+
     fn run_test(string: &str, expr_count: usize) -> Vec<FmtPart> {
         let fmt = super::Formatter {
             string: string.chars().peekmore(),
+            crate_ident: crate_ident(),
             exprs: fake_exprs(expr_count).into_iter(),
             fmt_parts: Vec::new(),
         };
@@ -241,6 +254,7 @@ mod tests {
         assert_eq!(
             parts,
             vec![FmtPart::Spec(
+                crate_ident(),
                 FmtSpec {
                     ..FmtSpec::default()
                 },
@@ -255,6 +269,7 @@ mod tests {
         assert_eq!(
             parts,
             vec![FmtPart::Spec(
+                crate_ident(),
                 FmtSpec {
                     kind: FmtType::Debug,
                     ..FmtSpec::default()
@@ -270,6 +285,7 @@ mod tests {
         assert_eq!(
             parts,
             vec![FmtPart::Spec(
+                crate_ident(),
                 FmtSpec {
                     arg: Argument::Keyword("uwu".to_string()),
                     align: Some(Align {
