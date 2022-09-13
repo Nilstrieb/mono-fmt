@@ -130,9 +130,9 @@ where
 impl ToTokens for Alignment {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
-            Self::Center => quote! { WithCenterAlign },
-            Self::Left => quote! { WithLeftAlign },
-            Self::Right => quote! { WithRightAlign },
+            Self::Left => quote! { 1 },
+            Self::Center => quote! { 2 },
+            Self::Right => quote! { 3 },
         })
     }
 }
@@ -154,7 +154,7 @@ impl ToTokens for FmtPart {
                         opt_toks = quote! { #crate_ident::_private::WithFill<#opt_toks, #fill> };
                     }
                     let alignment = align.kind;
-                    opt_toks = quote! { #crate_ident::_private::#alignment<#opt_toks> };
+                    opt_toks = quote! { #crate_ident::_private::WithAlign<#opt_toks, #alignment> };
                 }
 
                 if spec.alternate {

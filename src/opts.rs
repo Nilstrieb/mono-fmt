@@ -14,6 +14,10 @@ macro_rules! options {
             fn $name:ident() -> $ret:ty {
                 $($default:tt)*
             }
+
+            struct $with_name:ident$(<$(const $const_gen_name:ident: $with_ty:ty),*>)? {
+                $($struct_body:tt)*
+            }
         )*
     ) => {
         pub trait FmtOpts {
@@ -29,7 +33,7 @@ macro_rules! options {
         }
 
         impl FmtOpts for () {
-            type Inner = never::Never;
+            type Inner = Self;
 
             $(
                 #[inline]
@@ -47,6 +51,18 @@ macro_rules! options {
                 }
             )*
         }
+
+        $(
+            pub struct $with_name<I, $($(const $const_gen_name: $with_ty),*)?>(#[doc(hidden)] pub I);
+
+            impl<I: FmtOpts, $($(const $const_gen_name: $with_ty),*)?> FmtOpts for $with_name<I, $($($const_gen_name),*)?> {
+                type Inner = I;
+
+                fn $name() -> $ret {
+                    $($struct_body)*
+                }
+            }
+        )*
     };
 }
 
@@ -54,113 +70,77 @@ options!(
     fn alternate() -> bool {
         false
     }
+    struct WithAlternate {
+        true
+    }
 
     fn width() -> Option<usize> {
         None
+    }
+    struct WithWidth<const A: usize> {
+        Some(A)
     }
 
     fn align() -> Alignment {
         Alignment::Unknown
     }
+    struct WithAlign<const A: usize> {
+        match A {
+            0 => Alignment::Unknown,
+            1 => Alignment::Left,
+            2 => Alignment::Center,
+            3 => Alignment::Right,
+            _ => panic!("invalid alignment number {A}")
+        }
+    }
+
 
     fn fill() -> char {
         ' '
+    }
+    struct WithFill<const A: char> {
+        A
     }
 
     fn sign_plus() -> bool {
         false
     }
+    struct WithSignPlus {
+        true
+    }
 
     fn sign_aware_zero_pad() -> bool {
         false
+    }
+    struct WithSignAwareZeroPad {
+        true
     }
 
     fn sign_minus() -> bool {
         false
     }
+    struct WithMinus {
+        true
+    }
 
     fn precision() -> Option<usize> {
         None
+    }
+    struct WithPrecision<const A: usize> {
+        Some(A)
     }
 
     fn debug_lower_hex() -> bool {
         false
     }
+    struct WithDebugLowerHex {
+        true
+    }
 
     fn debug_upper_hex() -> bool {
         false
     }
+    struct WithDebugUpperHex {
+        false
+    }
 );
-
-mod never {
-    use crate::FmtOpts;
-
-    pub trait Func {
-        type Output;
-    }
-
-    impl<T> Func for fn() -> T {
-        type Output = T;
-    }
-
-    pub type Never = <fn() -> ! as Func>::Output;
-
-    impl FmtOpts for Never {
-        type Inner = Self;
-    }
-}
-
-pub struct WithAlternate<I>(pub I);
-
-impl<I: FmtOpts> FmtOpts for WithAlternate<I> {
-    type Inner = I;
-    #[inline]
-    fn alternate() -> bool {
-        true
-    }
-}
-pub struct WithWidth<I, const A: usize>(pub I);
-
-impl<I: FmtOpts, const A: usize> FmtOpts for WithWidth<I, A> {
-    type Inner = I;
-    #[inline]
-    fn width() -> Option<usize> {
-        Some(A)
-    }
-}
-pub struct WithLeftAlign<I>(pub I);
-
-impl<I: FmtOpts> FmtOpts for WithLeftAlign<I> {
-    type Inner = I;
-    #[inline]
-    fn align() -> Alignment {
-        Alignment::Left
-    }
-}
-pub struct WithRightAlign<I>(pub I);
-
-impl<I: FmtOpts> FmtOpts for WithRightAlign<I> {
-    type Inner = I;
-    #[inline]
-    fn align() -> Alignment {
-        Alignment::Right
-    }
-}
-pub struct WithCenterAlign<I>(pub I);
-
-impl<I: FmtOpts> FmtOpts for WithCenterAlign<I> {
-    type Inner = I;
-    #[inline]
-    fn align() -> Alignment {
-        Alignment::Center
-    }
-}
-pub struct WithFill<I, const A: char>(pub I);
-
-impl<I: FmtOpts, const A: char> FmtOpts for WithFill<I, A> {
-    type Inner = I;
-    #[inline]
-    fn fill() -> char {
-        A
-    }
-}

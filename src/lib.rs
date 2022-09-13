@@ -122,7 +122,7 @@ mod _private {
     pub use crate::{
         args::{ConstWidthArg, DebugArg, DisplayArg, Str},
         opts::{
-            WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth,
+            WithAlternate, WithFill, WithAlign, WithWidth,
         },
     };
 }
@@ -167,8 +167,4 @@ mod tests {
         let result = format!("a: {}", 32523532u64);
         assert_eq!(result, "a: 32523532");
     }
-}
-
-fn f() {
-    crate::format!("uwu, {f:_<?}", "what");
 }
