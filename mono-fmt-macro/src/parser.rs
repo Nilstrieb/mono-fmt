@@ -15,7 +15,7 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Alignment {
     Left,
     Center,
@@ -33,13 +33,13 @@ impl Alignment {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Align {
     pub kind: Alignment,
     pub fill: Option<char>,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub enum Argument {
     #[default]
     Positional,
@@ -47,7 +47,7 @@ pub enum Argument {
     Keyword(String),
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub enum FmtType {
     #[default]
     Default,
@@ -57,13 +57,13 @@ pub enum FmtType {
     Other(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Precision {
     Num(usize),
     Asterisk,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct FmtSpec {
     pub arg: Argument,
     pub align: Option<Align>,

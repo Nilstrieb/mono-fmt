@@ -502,7 +502,7 @@ fn parse_u64_into<const N: usize>(mut n: u64, buf: &mut [MaybeUninit<u8>; N], cu
 
             *curr -= 16;
 
-            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr + 0), 2);
+            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d2 as isize), buf_ptr.offset(*curr + 2), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d3 as isize), buf_ptr.offset(*curr + 4), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d4 as isize), buf_ptr.offset(*curr + 6), 2);
@@ -522,7 +522,7 @@ fn parse_u64_into<const N: usize>(mut n: u64, buf: &mut [MaybeUninit<u8>; N], cu
             let d4 = ((to_parse / 1e0 as u64) % 100) << 1;
             *curr -= 8;
 
-            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr + 0), 2);
+            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d2 as isize), buf_ptr.offset(*curr + 2), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d3 as isize), buf_ptr.offset(*curr + 4), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d4 as isize), buf_ptr.offset(*curr + 6), 2);
@@ -537,7 +537,7 @@ fn parse_u64_into<const N: usize>(mut n: u64, buf: &mut [MaybeUninit<u8>; N], cu
             let d2 = (to_parse % 100) << 1;
             *curr -= 4;
 
-            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr + 0), 2);
+            ptr::copy_nonoverlapping(lut_ptr.offset(d1 as isize), buf_ptr.offset(*curr), 2);
             ptr::copy_nonoverlapping(lut_ptr.offset(d2 as isize), buf_ptr.offset(*curr + 2), 2);
         }
 

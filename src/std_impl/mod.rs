@@ -32,12 +32,10 @@ mod numfmt {
                         } else {
                             3
                         }
+                    } else if v < 10_000 {
+                        4
                     } else {
-                        if v < 10_000 {
-                            4
-                        } else {
-                            5
-                        }
+                        5
                     }
                 }
                 Part::Copy(buf) => buf.len(),
@@ -223,15 +221,15 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
 
             // remaining parts go through the ordinary padding process.
             let len = formatted.len();
-            let ret = if width <= len {
+            
+            if width <= len {
                 // no padding
                 self.write_formatted_parts(&formatted)
             } else {
                 let post_padding = self.padding(width - len, the_align, the_fill, the_align)?;
                 self.write_formatted_parts(&formatted)?;
                 post_padding.write(self)
-            };
-            ret
+            }
         } else {
             // this is the common case and we take a shortcut
             self.write_formatted_parts(formatted)

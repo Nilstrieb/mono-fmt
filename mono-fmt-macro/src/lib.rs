@@ -53,7 +53,7 @@ impl Parse for Input {
 
 enum FmtPart {
     Literal(Ident, String),
-    Spec(Ident, FmtSpec, Expr),
+    Spec(Ident, FmtSpec, Box<Expr>),
 }
 
 impl std::fmt::Debug for FmtPart {
@@ -101,7 +101,7 @@ where
                     let argument = self.fmt_spec()?;
                     let expr = self.expect_expr();
                     self.fmt_parts
-                        .push(FmtPart::Spec(self.crate_ident.clone(), argument, expr));
+                        .push(FmtPart::Spec(self.crate_ident.clone(), argument, Box::new(expr)));
                 }
                 other => {
                     next_string.push(other);
@@ -230,6 +230,11 @@ mod tests {
         syn::parse_str("1").unwrap()
     }
 
+    
+    fn fake_expr_box() -> Box<Expr> {
+        Box::new(syn::parse_str("1").unwrap())
+    }
+
     fn fake_exprs(count: usize) -> Vec<Expr> {
         vec![fake_expr(); count]
     }
@@ -258,7 +263,7 @@ mod tests {
                 FmtSpec {
                     ..FmtSpec::default()
                 },
-                fake_expr()
+                fake_expr_box()
             )]
         );
     }
@@ -274,7 +279,7 @@ mod tests {
                     kind: FmtType::Debug,
                     ..FmtSpec::default()
                 },
-                fake_expr()
+                fake_expr_box()
             )]
         );
     }
@@ -295,7 +300,7 @@ mod tests {
                     kind: FmtType::Debug,
                     ..FmtSpec::default()
                 },
-                fake_expr()
+                fake_expr_box()
             )]
         );
     }
