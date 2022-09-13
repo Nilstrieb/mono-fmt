@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 // for the test macro expansion
-#[cfg(test)]
 extern crate self as mono_fmt;
 
 mod args;

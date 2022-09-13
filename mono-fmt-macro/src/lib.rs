@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-use parser::{Error, FmtSpec};
+use parser::{Alignment, Error, FmtSpec, FmtType};
 use peekmore::{PeekMore, PeekMoreIterator};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -93,6 +93,7 @@ where
         while let Some(char) = self.string.next() {
             match char {
                 '{' => {
+                    self.save_string(std::mem::take(&mut next_string));
                     let argument = self.fmt_spec()?;
                     let expr = self.expect_expr();
                     self.fmt_parts.push(FmtPart::Spec(argument, expr));
@@ -120,6 +121,16 @@ where
     }
 }
 
+impl ToTokens for Alignment {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend(match self {
+            Self::Center => quote! { WithCenterAlign },
+            Self::Left => quote! { WithLeftAlign },
+            Self::Right => quote! { WithRightAlign },
+        })
+    }
+}
+
 impl ToTokens for FmtPart {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let own_tokens = match self {
@@ -127,7 +138,42 @@ impl ToTokens for FmtPart {
                 let literal = LitStr::new(lit, Span::call_site());
                 quote! { ::mono_fmt::_private::Str(#literal) }
             }
-            FmtPart::Spec(_, _) => todo!(),
+            FmtPart::Spec(spec, expr) => {
+                let mut tokens = expr.to_token_stream();
+                if let Some(align) = &spec.align {
+                    if let Some(fill) = align.fill {
+                        tokens = quote! { ::mono_fmt::_private::WithFill::<_, #fill>(#tokens) };
+                    }
+                    let alignment = align.kind;
+                    tokens = quote! { ::mono_fmt::_private::#alignment(#tokens) };
+                }
+
+                if spec.alternate {
+                    tokens = quote! { ::mono_fmt::_private::WithAlternate(#tokens) };
+                }
+
+                if spec.zero {
+                    todo!()
+                }
+
+                if let Some(_) = spec.width {
+                    todo!()
+                }
+
+                if let Some(_) = spec.precision {
+                    todo!()
+                }
+
+                match spec.kind {
+                    FmtType::Default => quote! {
+                        ::mono_fmt::_private::DisplayArg(#tokens)
+                    },
+                    FmtType::Debug => quote! {
+                        ::mono_fmt::_private::DebugArg(#tokens)
+                    },
+                    _ => todo!(),
+                }
+            }
         };
 
         tokens.extend(own_tokens);

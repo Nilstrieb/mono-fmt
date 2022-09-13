@@ -15,7 +15,7 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Alignment {
     Left,
     Center,
@@ -33,7 +33,7 @@ impl Alignment {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Align {
     pub kind: Alignment,
     pub fill: Option<char>,
