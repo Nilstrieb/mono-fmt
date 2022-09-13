@@ -2,7 +2,7 @@
 
 mod args;
 mod opts;
-mod std_impl;
+mod rust_core_impl;
 mod write;
 
 #[macro_export]

@@ -6,7 +6,7 @@ use std::{
     ptr, slice, str,
 };
 
-use crate::{self as fmt, std_impl::numfmt, FmtOpts, Write};
+use crate::{self as fmt, rust_core_impl::numfmt, FmtOpts, Write};
 
 #[doc(hidden)]
 trait DisplayInt:
