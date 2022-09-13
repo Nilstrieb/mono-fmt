@@ -4,13 +4,10 @@ mod args;
 mod opts;
 mod write;
 
-#[doc(hidden)]
-pub use mono_fmt_macro::__format_args;
-
 #[macro_export]
 macro_rules! format_args {
     ($($tt:tt)*) => {
-        $crate::__format_args!($crate $($tt)*)
+        $crate::_private::__format_args!($crate $($tt)*)
     };
 }
 
@@ -98,12 +95,16 @@ pub fn format<A: Arguments>(args: A) -> String {
     string
 }
 
+/// Not part of the public API.
+#[doc(hidden)]
 mod _private {
     pub use crate::args::{ConstWidthArg, DebugArg, DisplayArg, Str};
 
     pub use crate::opts::{
         WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth,
     };
+
+    pub use mono_fmt_macro::__format_args;
 }
 
 #[macro_export]
