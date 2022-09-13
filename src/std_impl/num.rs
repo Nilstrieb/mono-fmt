@@ -1,11 +1,12 @@
 //! Integer and floating-point number formatting
 
+use std::{
+    mem::MaybeUninit,
+    ops::{Div, Rem, Sub},
+    ptr, slice, str,
+};
+
 use crate::{self as fmt, FmtOpts, Write};
-use std::mem::MaybeUninit;
-use std::ops::{Div, Rem, Sub};
-use std::ptr;
-use std::slice;
-use std::str;
 
 mod numfmt {
     //! Shared utilities used by both float and integer formatting.

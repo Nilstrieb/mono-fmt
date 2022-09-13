@@ -12,8 +12,7 @@ macro_rules! format_args {
     };
 }
 
-pub use crate::args::Arguments;
-pub use crate::opts::FmtOpts;
+pub use crate::{args::Arguments, opts::FmtOpts};
 
 pub type Result = std::result::Result<(), Error>;
 
@@ -118,13 +117,14 @@ pub fn format<A: Arguments>(args: A) -> String {
 /// Not part of the public API.
 #[doc(hidden)]
 mod _private {
-    pub use crate::args::{ConstWidthArg, DebugArg, DisplayArg, Str};
-
-    pub use crate::opts::{
-        WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth,
-    };
-
     pub use mono_fmt_macro::__format_args;
+
+    pub use crate::{
+        args::{ConstWidthArg, DebugArg, DisplayArg, Str},
+        opts::{
+            WithAlternate, WithCenterAlign, WithFill, WithLeftAlign, WithRightAlign, WithWidth,
+        },
+    };
 }
 
 #[macro_export]

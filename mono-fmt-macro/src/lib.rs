@@ -69,7 +69,7 @@ impl PartialEq for FmtPart {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(_, a), Self::Literal(_, b)) => a == b,
-            (Self::Spec(_ ,a, _), Self::Spec(_, b, _)) => a == b,
+            (Self::Spec(_, a, _), Self::Spec(_, b, _)) => a == b,
             _ => false,
         }
     }
