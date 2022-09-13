@@ -140,6 +140,9 @@ impl ToTokens for FmtPart {
             }
             FmtPart::Spec(spec, expr) => {
                 let mut tokens = expr.to_token_stream();
+
+                // FIXME: Wait no we want `DebugArg::<WithUwu<WithOwo<()>>>(expr)`
+
                 if let Some(align) = &spec.align {
                     if let Some(fill) = align.fill {
                         tokens = quote! { ::mono_fmt::_private::WithFill::<_, #fill>(#tokens) };

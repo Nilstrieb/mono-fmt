@@ -136,3 +136,8 @@ mod tests {
         assert_eq!(result, r#"test "uwu" hello"#);
     }
 }
+
+
+fn f() {
+    crate::format!("uwu, {f:_<?}", "what");
+}
