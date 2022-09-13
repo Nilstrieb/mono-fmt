@@ -60,8 +60,8 @@ pub struct FmtSpec {
     kind: FmtType,
 }
 
-pub struct FmtSpecParser<'a> {
-    chars: &'a mut Peekable<Chars<'a>>,
+pub struct FmtSpecParser<'a, 'b> {
+    chars: &'a mut Peekable<Chars<'b>>,
     /// The last state of the parser.
     state: State,
     argument: FmtSpec,
@@ -81,8 +81,8 @@ enum State {
     Done,
 }
 
-impl<'a> FmtSpecParser<'a> {
-    pub fn new(chars: &'a mut Peekable<Chars<'a>>) -> Self {
+impl<'a, 'b> FmtSpecParser<'a, 'b> {
+    pub fn new(chars: &'a mut Peekable<Chars<'b>>) -> Self {
         Self {
             chars,
             state: State::Initial,

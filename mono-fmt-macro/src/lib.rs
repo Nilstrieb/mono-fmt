@@ -1,6 +1,7 @@
 use core::panic;
 use std::{iter::Peekable, str::Chars};
 
+use parser::FmtSpec;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -56,18 +57,14 @@ struct Advanced {
 
 enum FmtPart {
     Literal(String),
-    Debug(Expr),
-    Display(Expr),
-    Advanced(Advanced, Expr),
+    Spec(FmtSpec, Expr),
 }
 
 impl std::fmt::Debug for FmtPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
-            Self::Debug(_) => f.debug_tuple("Debug").finish(),
-            Self::Display(_) => f.debug_tuple("Display").finish(),
-            Self::Advanced(arg0, _) => f.debug_tuple("Advanced").field(arg0).finish(),
+            Self::Spec(spec, _) => f.debug_tuple("Spec").field(spec).finish(),
         }
     }
 }
@@ -76,9 +73,7 @@ impl PartialEq for FmtPart {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::Debug(_), Self::Debug(_)) => true,
-            (Self::Display(_), Self::Display(_)) => true,
-            (Self::Advanced(a, _), Self::Advanced(b, _)) => a == b,
+            (Self::Spec(a, _), Self::Spec(b, _)) => a == b,
             _ => false,
         }
     }
@@ -107,30 +102,15 @@ where
             .expect("missing argument for display formatting")
     }
 
-    fn expect_char(&mut self, char: char) {
-        let next = self.string.next();
-        if next != Some(char) {
-            panic!(
-                "expected {char}, found {}",
-                next.map(|c| c.to_string())
-                    .unwrap_or_else(|| "end of input".to_string())
-            );
-        }
-    }
-
-    fn eat(&mut self, char: char) -> bool {
-        if self.string.peek() == Some(&char) {
-            self.string.next();
-            return true;
-        }
-        false
-    }
-
     fn parse(mut self) -> Vec<FmtPart> {
         let mut next_string = String::new();
         while let Some(char) = self.string.next() {
             match char {
-                '{' => self.fmt_part(&mut next_string),
+                '{' => {
+                    let argument = self.fmt_spec().unwrap();
+                    let expr = self.expect_expr();
+                    self.fmt_parts.push(FmtPart::Spec(argument, expr));
+                }
                 other => {
                     next_string.push(other);
                 }
@@ -141,63 +121,9 @@ where
         self.fmt_parts
     }
 
-    fn fmt_part(&mut self, next_string: &mut String) {
-        match self.string.next() {
-            Some('}') => {
-                self.save_string(std::mem::take(next_string));
-                let expr = self.expect_expr();
-                self.fmt_parts.push(FmtPart::Display(expr));
-            }
-            Some(':') => {
-                self.save_string(std::mem::take(next_string));
-
-                if self.eat('?') {
-                    let expr = self.expect_expr();
-                    self.fmt_parts.push(FmtPart::Debug(expr));
-                } else {
-                    let mut advanced = Advanced {
-                        width: None,
-                        fill: None,
-                        align: None,
-                    };
-                    self.advanced_fmt(&mut advanced, true);
-                    let expr = self.expect_expr();
-                    self.fmt_parts.push(FmtPart::Advanced(advanced, expr));
-                }
-
-                self.expect_char('}');
-            }
-            Some(other) => {
-                panic!("expected }}, found '{}'", other)
-            }
-            None => {
-                panic!("expected '}}'")
-            }
-        }
-    }
-
-    fn advanced_fmt(&mut self, advanced: &mut Advanced, allow_fill: bool) {
-        match self.string.next().expect("expected something after {:") {
-            '?' => unreachable!(),
-            '<' => {
-                advanced.align = Some(Alignment::Left);
-            }
-            '>' => {
-                advanced.align = Some(Alignment::Right);
-            }
-            '^' => {
-                advanced.align = Some(Alignment::Center);
-            }
-            fill if allow_fill => {
-                advanced.fill = Some(fill);
-                self.advanced_fmt(advanced, false)
-            }
-            char => panic!("invalid char {char}"),
-        }
-
-        if let Some(width) = self.string.next() {
-            advanced.width = Some(width.to_string().parse().unwrap());
-        }
+    fn fmt_spec(&mut self) -> Result<parser::FmtSpec, ()> {
+        let parser = parser::FmtSpecParser::new(&mut self.string);
+        parser.parse()
     }
 
     fn save_string(&mut self, string: String) {
@@ -215,15 +141,7 @@ impl ToTokens for FmtPart {
                 let literal = LitStr::new(lit, Span::call_site());
                 quote! { ::mono_fmt::_private::Str(#literal) }
             }
-            FmtPart::Display(expr) => {
-                quote! { ::mono_fmt::_private::DisplayArg(#expr) }
-            }
-            FmtPart::Debug(expr) => {
-                quote! { ::mono_fmt::_private::DebugArg(#expr) }
-            }
-            FmtPart::Advanced(_, _) => {
-                todo!()
-            }
+            FmtPart::Spec(_, _) => todo!(),
         };
 
         tokens.extend(own_tokens);
@@ -235,7 +153,9 @@ pub fn format_args(tokens: TokenStream) -> TokenStream {
     let input = parse_macro_input!(tokens as Input);
 
     if false {
-        parser::FmtSpecParser::new(&mut input.format_str.chars().peekable()).parse().unwrap();
+        parser::FmtSpecParser::new(&mut input.format_str.chars().peekable())
+            .parse()
+            .unwrap();
     }
 
     let formatter = Formatter {
