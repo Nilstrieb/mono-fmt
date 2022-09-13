@@ -27,32 +27,3 @@ impl Display for String {
         f.write_str(self)
     }
 }
-
-macro_rules! naive_fmt {
-    ($($int:ty)*) => {
-        $(
-            impl Debug for $int {
-                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-                    // FIXME lol
-                    let string = format!("{:?}", self);
-                    f.write_str(&string)
-                }
-            }
-
-            impl Display for $int {
-                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-                    // FIXME lol
-                    let string = self.to_string();
-                    f.write_str(&string)
-                }
-            }
-        )*
-    };
-}
-
-naive_fmt!(
-    u8 u16 u32 u64 u128 usize
-    i8 i16 i32 i64 i128 isize
-
-    f32 f64
-);

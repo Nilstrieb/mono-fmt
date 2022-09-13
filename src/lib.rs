@@ -2,6 +2,7 @@
 
 mod args;
 mod opts;
+mod std_impl;
 mod write;
 
 #[macro_export]
@@ -51,6 +52,25 @@ pub trait Debug {
 }
 
 pub trait Display {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+
+pub trait Binary {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+pub trait Octal {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+pub trait LowerHex {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+pub trait UpperHex {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+pub trait UpperExp {
+    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+}
+pub trait LowerExp {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
 }
 
