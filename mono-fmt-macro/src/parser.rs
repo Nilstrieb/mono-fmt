@@ -35,8 +35,8 @@ impl Alignment {
 
 #[derive(Debug, PartialEq)]
 pub struct Align {
-    kind: Alignment,
-    fill: Option<char>,
+    pub kind: Alignment,
+    pub fill: Option<char>,
 }
 
 #[derive(Debug, PartialEq, Default)]
@@ -58,21 +58,21 @@ pub enum FmtType {
 }
 
 #[derive(Debug, PartialEq)]
-enum Precision {
+pub enum Precision {
     Num(usize),
     Asterisk,
 }
 
 #[derive(Debug, PartialEq, Default)]
 pub struct FmtSpec {
-    arg: Argument,
-    align: Option<Align>,
-    sign: Option<char>,
-    alternate: bool,
-    zero: bool,
-    width: Option<usize>,
-    precision: Option<Precision>,
-    kind: FmtType,
+    pub arg: Argument,
+    pub align: Option<Align>,
+    pub sign: Option<char>,
+    pub alternate: bool,
+    pub zero: bool,
+    pub width: Option<usize>,
+    pub precision: Option<Precision>,
+    pub kind: FmtType,
 }
 
 pub struct FmtSpecParser<'a, 'b> {
@@ -88,11 +88,6 @@ enum State {
     Argument,
     // : here
     Align,
-    Sign,
-    Alternate,
-    Zero,
-    Width,
-    Precision,
     Done,
 }
 
@@ -171,6 +166,7 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                 if self.argument.arg != Argument::Positional {
                     self.expect(':')?;
                 }
+                self.eat(':');
             }
             State::Argument => match self
                 .peek()
@@ -185,8 +181,9 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                     self.state = State::Align;
                 }
                 other => {
-                    // peek2
-                    if let Some(c @ ('>' | '^' | '<')) = self.peek() {
+                    if let Some(c @ ('>' | '^' | '<')) = self.chars.peek_nth(1).copied() {
+                        self.next(); // fill
+                        self.next(); // align
                         self.argument.align = Some(Align {
                             kind: Alignment::from_char(c).unwrap(),
                             fill: Some(other),
@@ -201,30 +198,22 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                     self.next();
                     self.argument.sign = Some(c);
                 }
-                self.state = State::Sign;
-            }
-            State::Sign => {
+
                 if self.eat('#') {
                     self.argument.alternate = true;
                 }
-                self.state = State::Alternate;
-            }
-            State::Alternate => {
+
                 if self.eat('0') {
                     self.argument.zero = true;
                 }
-                self.state = State::Zero;
-            }
-            State::Zero => {
+
                 if let Some(width) = self.eat_until(|c| !c.is_ascii_digit()) {
                     let width = width
                         .parse()
                         .map_err(|_| Error::new("width specified too long".to_string()))?;
                     self.argument.width = Some(width);
                 }
-                self.state = State::Width;
-            }
-            State::Width => {
+
                 if self.eat('.') {
                     if let Some(precision) = self.eat_until(|c| c != '*' && !c.is_ascii_digit()) {
                         let precision = if precision == "*" {
@@ -237,34 +226,36 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                         self.argument.precision = Some(precision);
                     }
                 }
-                self.state = State::Precision;
-            }
-            State::Precision => match self.next() {
-                Some('?') => {
-                    self.argument.kind = FmtType::Debug;
-                    self.expect('}')?;
-                }
-                Some('x') => {
-                    self.expect('?')?;
-                    self.argument.kind = FmtType::LowerHex;
-                    self.expect('}')?;
-                }
-                Some('X') => {
-                    self.expect('?')?;
-                    self.argument.kind = FmtType::UpperHex;
-                    self.expect('}')?;
-                }
-                Some('}') | None => {}
-                Some(other) => {
-                    if let Some(kind) = self.eat_until(|c| c == '}') {
-                        self.argument.kind = FmtType::Other(format!("{other}{kind}"));
-                        self.expect('}')?;
-                    } else {
-                        self.argument.kind = FmtType::Default;
+
+                match self.next() {
+                    Some('?') => {
+                        self.argument.kind = FmtType::Debug;
                         self.expect('}')?;
                     }
+                    Some('x') => {
+                        self.expect('?')?;
+                        self.argument.kind = FmtType::LowerHex;
+                        self.expect('}')?;
+                    }
+                    Some('X') => {
+                        self.expect('?')?;
+                        self.argument.kind = FmtType::UpperHex;
+                        self.expect('}')?;
+                    }
+                    Some('}') | None => {}
+                    Some(other) => {
+                        if let Some(kind) = self.eat_until(|c| c == '}') {
+                            self.argument.kind = FmtType::Other(format!("{other}{kind}"));
+                            self.expect('}')?;
+                        } else {
+                            self.argument.kind = FmtType::Default;
+                            self.expect('}')?;
+                        }
+                    }
                 }
-            },
+
+                self.state = State::Done;
+            }
             State::Done => unreachable!(),
         }
 

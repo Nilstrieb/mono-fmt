@@ -1,7 +1,7 @@
 use std::str::Chars;
 
 use parser::{Error, FmtSpec};
-use peekmore::{PeekMoreIterator, PeekMore};
+use peekmore::{PeekMore, PeekMoreIterator};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -13,8 +13,6 @@ use syn::{
 };
 
 mod parser;
-
-// TODO: Rewrite using state machine please
 
 struct Input {
     format_str: String,
@@ -163,9 +161,13 @@ pub fn format_args(tokens: TokenStream) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
+    use peekmore::PeekMore;
     use syn::Expr;
 
-    use crate::FmtPart;
+    use crate::{
+        parser::{Align, Alignment, Argument, FmtSpec, FmtType},
+        FmtPart,
+    };
 
     fn fake_expr() -> Expr {
         syn::parse_str("1").unwrap()
@@ -177,10 +179,59 @@ mod tests {
 
     fn run_test(string: &str, expr_count: usize) -> Vec<FmtPart> {
         let fmt = super::Formatter {
-            string: string.chars().peekable(),
+            string: string.chars().peekmore(),
             exprs: fake_exprs(expr_count).into_iter(),
             fmt_parts: Vec::new(),
         };
         fmt.parse().unwrap()
+    }
+
+    #[test]
+    fn empty() {
+        let parts = run_test("{}", 1);
+        assert_eq!(
+            parts,
+            vec![FmtPart::Spec(
+                FmtSpec {
+                    ..FmtSpec::default()
+                },
+                fake_expr()
+            )]
+        );
+    }
+
+    #[test]
+    fn debug() {
+        let parts = run_test("{:?}", 1);
+        assert_eq!(
+            parts,
+            vec![FmtPart::Spec(
+                FmtSpec {
+                    kind: FmtType::Debug,
+                    ..FmtSpec::default()
+                },
+                fake_expr()
+            )]
+        );
+    }
+
+    #[test]
+    fn many() {
+        let parts = run_test("{uwu:-<?}", 1);
+        assert_eq!(
+            parts,
+            vec![FmtPart::Spec(
+                FmtSpec {
+                    arg: Argument::Keyword("uwu".to_string()),
+                    align: Some(Align {
+                        kind: Alignment::Left,
+                        fill: Some('-'),
+                    }),
+                    kind: FmtType::Debug,
+                    ..FmtSpec::default()
+                },
+                fake_expr()
+            )]
+        );
     }
 }
