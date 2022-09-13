@@ -1,7 +1,7 @@
-use core::panic;
-use std::{iter::Peekable, str::Chars};
+use std::str::Chars;
 
-use parser::FmtSpec;
+use parser::{Error, FmtSpec};
+use peekmore::{PeekMoreIterator, PeekMore};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -18,6 +18,7 @@ mod parser;
 
 struct Input {
     format_str: String,
+    str_span: Span,
     exprs: Punctuated<Expr, Token![,]>,
 }
 
@@ -43,16 +44,10 @@ impl Parse for Input {
 
         Ok(Self {
             format_str: first.value(),
+            str_span: first.span(),
             exprs,
         })
     }
-}
-
-#[derive(Debug, PartialEq)]
-struct Advanced {
-    width: Option<usize>,
-    fill: Option<char>,
-    align: Option<Alignment>,
 }
 
 enum FmtPart {
@@ -79,15 +74,8 @@ impl PartialEq for FmtPart {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum Alignment {
-    Left,
-    Center,
-    Right,
-}
-
 struct Formatter<'a, I> {
-    string: Peekable<Chars<'a>>,
+    string: PeekMoreIterator<Chars<'a>>,
     exprs: I,
     fmt_parts: Vec<FmtPart>,
 }
@@ -102,12 +90,12 @@ where
             .expect("missing argument for display formatting")
     }
 
-    fn parse(mut self) -> Vec<FmtPart> {
+    fn parse(mut self) -> Result<Vec<FmtPart>, Error> {
         let mut next_string = String::new();
         while let Some(char) = self.string.next() {
             match char {
                 '{' => {
-                    let argument = self.fmt_spec().unwrap();
+                    let argument = self.fmt_spec()?;
                     let expr = self.expect_expr();
                     self.fmt_parts.push(FmtPart::Spec(argument, expr));
                 }
@@ -118,10 +106,10 @@ where
         }
         self.save_string(next_string);
 
-        self.fmt_parts
+        Ok(self.fmt_parts)
     }
 
-    fn fmt_spec(&mut self) -> Result<parser::FmtSpec, ()> {
+    fn fmt_spec(&mut self) -> Result<parser::FmtSpec, Error> {
         let parser = parser::FmtSpecParser::new(&mut self.string);
         parser.parse()
     }
@@ -152,19 +140,20 @@ impl ToTokens for FmtPart {
 pub fn format_args(tokens: TokenStream) -> TokenStream {
     let input = parse_macro_input!(tokens as Input);
 
-    if false {
-        parser::FmtSpecParser::new(&mut input.format_str.chars().peekable())
-            .parse()
-            .unwrap();
-    }
-
     let formatter = Formatter {
-        string: input.format_str.chars().peekable(),
+        string: input.format_str.chars().peekmore(),
         exprs: input.exprs.into_iter(),
         fmt_parts: Vec::new(),
     };
 
-    let fmt_parts = formatter.parse();
+    let fmt_parts = match formatter.parse() {
+        Ok(parts) => parts,
+        Err(error) => {
+            return syn::Error::new(input.str_span, error.message)
+                .to_compile_error()
+                .into()
+        }
+    };
 
     quote! {
         (#(#fmt_parts),*,)
@@ -176,7 +165,7 @@ pub fn format_args(tokens: TokenStream) -> TokenStream {
 mod tests {
     use syn::Expr;
 
-    use crate::{Advanced, Alignment, FmtPart};
+    use crate::FmtPart;
 
     fn fake_expr() -> Expr {
         syn::parse_str("1").unwrap()
@@ -192,23 +181,6 @@ mod tests {
             exprs: fake_exprs(expr_count).into_iter(),
             fmt_parts: Vec::new(),
         };
-        fmt.parse()
-    }
-
-    #[test]
-    fn parse_fmt() {
-        let string = "{:<5}";
-        let parts = run_test(string, 1);
-        assert_eq!(
-            parts,
-            vec![FmtPart::Advanced(
-                Advanced {
-                    width: Some(5),
-                    fill: None,
-                    align: Some(Alignment::Left),
-                },
-                fake_expr()
-            )]
-        );
+        fmt.parse().unwrap()
     }
 }

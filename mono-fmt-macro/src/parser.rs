@@ -1,4 +1,19 @@
-use std::{iter::Peekable, str::Chars};
+use std::str::Chars;
+
+use peekmore::PeekMoreIterator;
+
+#[derive(Debug)]
+pub struct Error {
+    pub message: String,
+}
+
+impl Error {
+    fn new(message: String) -> Self {
+        Self { message }
+    }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq)]
 pub enum Alignment {
@@ -8,12 +23,12 @@ pub enum Alignment {
 }
 
 impl Alignment {
-    fn from_char(char: char) -> Result<Self, ()> {
+    fn from_char(char: char) -> Result<Self> {
         match char {
             '<' => Ok(Self::Left),
             '^' => Ok(Self::Center),
             '>' => Ok(Self::Right),
-            _ => Err(()),
+            _ => Err(Error::new(format!("Invalid alignment specifier {char}"))),
         }
     }
 }
@@ -61,7 +76,7 @@ pub struct FmtSpec {
 }
 
 pub struct FmtSpecParser<'a, 'b> {
-    chars: &'a mut Peekable<Chars<'b>>,
+    chars: &'a mut PeekMoreIterator<Chars<'b>>,
     /// The last state of the parser.
     state: State,
     argument: FmtSpec,
@@ -82,7 +97,7 @@ enum State {
 }
 
 impl<'a, 'b> FmtSpecParser<'a, 'b> {
-    pub fn new(chars: &'a mut Peekable<Chars<'b>>) -> Self {
+    pub fn new(chars: &'a mut PeekMoreIterator<Chars<'b>>) -> Self {
         Self {
             chars,
             state: State::Initial,
@@ -90,7 +105,7 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
         }
     }
 
-    pub fn parse(mut self) -> Result<FmtSpec, ()> {
+    pub fn parse(mut self) -> Result<FmtSpec> {
         while self.state != State::Done {
             self.step()?;
         }
@@ -113,9 +128,14 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
         false
     }
 
-    fn expect(&mut self, char: char) -> Result<(), ()> {
+    fn expect(&mut self, char: char) -> Result<()> {
         if !self.eat(char) {
-            return Err(());
+            return Err(Error::new(format!(
+                "Expected {char}, found {}",
+                self.peek()
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "end of input".to_string())
+            )));
         }
         Ok(())
     }
@@ -132,14 +152,10 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
         has_char.then_some(string)
     }
 
-    fn eat_until_match(&mut self, char: char) -> Option<String> {
-        self.eat_until(|c| c == char)
-    }
-
-    fn step(&mut self) -> Result<(), ()> {
+    fn step(&mut self) -> Result<()> {
         match self.state {
             State::Initial => {
-                let argument = if let Some(arg) = self.eat_until_match(':') {
+                let argument = if let Some(arg) = self.eat_until(|c| matches!(c, ':' | '}')) {
                     if let Ok(num) = arg.parse() {
                         Argument::PositionalExplicit(num)
                     } else {
@@ -152,12 +168,16 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                 self.argument.arg = argument;
                 self.state = State::Argument;
 
-                if !self.eat(':') {
-                    return Err(());
+                if self.argument.arg != Argument::Positional {
+                    self.expect(':')?;
                 }
             }
-            State::Argument => match self.next().ok_or(())? {
+            State::Argument => match self
+                .peek()
+                .ok_or_else(|| Error::new("unexpected end of input".to_string()))?
+            {
                 c @ ('>' | '^' | '<') => {
+                    self.next();
                     self.argument.align = Some(Align {
                         kind: Alignment::from_char(c)?,
                         fill: None,
@@ -165,6 +185,7 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                     self.state = State::Align;
                 }
                 other => {
+                    // peek2
                     if let Some(c @ ('>' | '^' | '<')) = self.peek() {
                         self.argument.align = Some(Align {
                             kind: Alignment::from_char(c).unwrap(),
@@ -196,7 +217,9 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
             }
             State::Zero => {
                 if let Some(width) = self.eat_until(|c| !c.is_ascii_digit()) {
-                    let width = width.parse().map_err(|_| ())?;
+                    let width = width
+                        .parse()
+                        .map_err(|_| Error::new("width specified too long".to_string()))?;
                     self.argument.width = Some(width);
                 }
                 self.state = State::Width;
@@ -207,7 +230,9 @@ impl<'a, 'b> FmtSpecParser<'a, 'b> {
                         let precision = if precision == "*" {
                             Precision::Asterisk
                         } else {
-                            Precision::Num(precision.parse().map_err(|_| ())?)
+                            Precision::Num(precision.parse().map_err(|_| {
+                                Error::new("precision specified too long".to_string())
+                            })?)
                         };
                         self.argument.precision = Some(precision);
                     }
