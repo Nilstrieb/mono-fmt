@@ -11,7 +11,7 @@ pub enum Alignment {
 macro_rules! options {
     (
         $(
-            fn $name:ident() -> $ret:ty {
+            fn $name:ident(&self) -> $ret:ty {
                 $($default:tt)*
             }
 
@@ -24,10 +24,12 @@ macro_rules! options {
             #[doc(hidden)]
             type Inner: FmtOpts;
 
+            fn inner(&self) -> &Self::Inner;
+
             $(
                 #[inline]
-                fn $name() -> $ret {
-                    Self::Inner::$name()
+                fn $name(&self) -> $ret {
+                    Self::Inner::$name(Self::inner(self))
                 }
             )*
         }
@@ -35,19 +37,39 @@ macro_rules! options {
         impl FmtOpts for () {
             type Inner = Self;
 
+            fn inner(&self) -> &Self::Inner {
+                self
+            }
+
             $(
                 #[inline]
-                fn $name() -> $ret {
+                fn $name(&self) -> $ret {
                     $($default)*
                 }
             )*
         }
 
+        impl<O: FmtOpts> FmtOpts for &'_ O {
+            type Inner = O::Inner;
+
+            fn inner(&self) ->  &Self::Inner {
+                O::inner(self)
+            }
+
+            $(
+                #[inline]
+                fn $name(&self) -> $ret {
+                    O::$name(self)
+                }
+            )*
+        }
+
+
         impl<W, O: FmtOpts> Formatter<W, O> {
             $(
                 #[inline]
                 pub fn $name(&self) -> $ret {
-                    O::$name()
+                    O::$name(&self.opts)
                 }
             )*
         }
@@ -58,7 +80,11 @@ macro_rules! options {
             impl<I: FmtOpts, $($(const $const_gen_name: $with_ty),*)?> FmtOpts for $with_name<I, $($($const_gen_name),*)?> {
                 type Inner = I;
 
-                fn $name() -> $ret {
+                fn inner(&self) -> &Self::Inner  {
+                    &self.0
+                }
+
+                fn $name(&self) -> $ret {
                     $($struct_body)*
                 }
             }
@@ -67,21 +93,21 @@ macro_rules! options {
 }
 
 options!(
-    fn alternate() -> bool {
+    fn alternate(&self) -> bool {
         false
     }
     struct WithAlternate {
         true
     }
 
-    fn width() -> Option<usize> {
+    fn width(&self) -> Option<usize> {
         None
     }
     struct WithWidth<const A: usize> {
         Some(A)
     }
 
-    fn align() -> Alignment {
+    fn align(&self) -> Alignment {
         Alignment::Unknown
     }
     struct WithAlign<const A: usize> {
@@ -95,49 +121,49 @@ options!(
     }
 
 
-    fn fill() -> char {
+    fn fill(&self) -> char {
         ' '
     }
     struct WithFill<const A: char> {
         A
     }
 
-    fn sign_plus() -> bool {
+    fn sign_plus(&self) -> bool {
         false
     }
     struct WithSignPlus {
         true
     }
 
-    fn sign_aware_zero_pad() -> bool {
+    fn sign_aware_zero_pad(&self) -> bool {
         false
     }
     struct WithSignAwareZeroPad {
         true
     }
 
-    fn sign_minus() -> bool {
+    fn sign_minus(&self) -> bool {
         false
     }
     struct WithMinus {
         true
     }
 
-    fn precision() -> Option<usize> {
+    fn precision(&self) -> Option<usize> {
         None
     }
     struct WithPrecision<const A: usize> {
         Some(A)
     }
 
-    fn debug_lower_hex() -> bool {
+    fn debug_lower_hex(&self) -> bool {
         false
     }
     struct WithDebugLowerHex {
         true
     }
 
-    fn debug_upper_hex() -> bool {
+    fn debug_upper_hex(&self) -> bool {
         false
     }
     struct WithDebugUpperHex {

@@ -1,11 +1,9 @@
-use std::marker::PhantomData;
-
-use crate::{Debug, Display, FmtOpts, Formatter, Result, Write};
+use crate::{FmtOpts, Formatter, Result, Write};
 pub trait Arguments {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
 }
 
-macro_rules! impl_arguments {
+macro_rules! tuple_args {
         () => {};
         ($first:ident $($rest:ident)*) => {
             impl<$first, $($rest),*> Arguments for ($first, $($rest),*)
@@ -24,12 +22,12 @@ macro_rules! impl_arguments {
                 }
             }
 
-            impl_arguments!($($rest)*);
+            tuple_args!($($rest)*);
         };
     }
 
 #[rustfmt::skip]
-    impl_arguments!(
+    tuple_args!(
         A1  A2  A3  A4  A5  A6  A7  A8  A9  A10
         // A11 A12 A13 A14 A15 A16 A17 A18 A19 A20
         // A21 A22 A23 A24 A25 A26 A27 A28 A29 A30
@@ -50,37 +48,33 @@ impl Arguments for Str {
     }
 }
 
-pub struct DebugArg<T, O>(pub T, pub PhantomData<O>);
+macro_rules! traits {
+    ($(struct $name:ident: trait $trait:ident);* $(;)?) => {
+        $(
+            pub struct $name<T, O>(pub T, pub O);
 
-impl<T: Debug, OutOpt> Arguments for DebugArg<T, OutOpt> {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-        Debug::fmt(&self.0, f)
-    }
+            pub trait $trait {
+                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
+            }
+
+            impl<T: $trait, O: FmtOpts> Arguments for $name<T, O> {
+                fn fmt<W: Write, OldOpts: FmtOpts>(&self, f: &mut Formatter<W, OldOpts>) -> Result {
+                    let mut f = f.with_opts(&self.1);
+
+                    <T as $trait>::fmt(&self.0, &mut f)
+                }
+            }
+        )*
+    };
 }
 
-pub struct DisplayArg<T, O>(pub T, pub PhantomData<O>);
-
-impl<T: Display, OutOpt> Arguments for DisplayArg<T, OutOpt> {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
-pub struct ConstWidthArg<T, const WIDTH: usize> {
-    value: T,
-    _boo: PhantomData<[(); WIDTH]>,
-}
-
-#[allow(non_snake_case)]
-pub fn ConstWidthArg<T, const WIDTH: usize>(value: T) -> ConstWidthArg<T, WIDTH> {
-    ConstWidthArg {
-        value,
-        _boo: PhantomData,
-    }
-}
-
-impl<T: Display, const WIDTH: usize> Arguments for ConstWidthArg<T, WIDTH> {
-    fn fmt<W: Write, O: FmtOpts>(&self, _: &mut Formatter<W, O>) -> Result {
-        todo!()
-    }
-}
+traits!(
+    struct DebugArg: trait Debug;
+    struct DisplayArg: trait Display;
+    struct BinaryArg: trait Binary;
+    struct OctalArg: trait Octal;
+    struct LowerHexArg: trait LowerHex;
+    struct UpperHexArg: trait UpperHex;
+    struct UpperExpArg: trait UpperExp;
+    struct LowerExpArg: trait LowerExp;
+);

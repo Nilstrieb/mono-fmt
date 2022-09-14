@@ -12,7 +12,10 @@ macro_rules! format_args {
     };
 }
 
-pub use crate::{args::Arguments, opts::FmtOpts};
+pub use crate::{
+    args::{Arguments, Binary, Debug, Display, LowerExp, LowerHex, Octal, UpperExp, UpperHex},
+    opts::FmtOpts,
+};
 
 pub type Result = std::result::Result<(), Error>;
 
@@ -46,33 +49,6 @@ impl<W: Write> Write for &mut W {
     }
 }
 
-pub trait Debug {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-
-pub trait Display {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-
-pub trait Binary {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-pub trait Octal {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-pub trait LowerHex {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-pub trait UpperHex {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-pub trait UpperExp {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-pub trait LowerExp {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
-}
-
 pub struct Formatter<W, O> {
     buf: W,
     opts: O,
@@ -103,6 +79,15 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
     }
 }
 
+impl<W, O> Formatter<W, O> {
+    fn with_opts<'opt, ONew>(&mut self, opts: &'opt ONew) -> Formatter<&mut W, &'opt ONew> {
+        Formatter {
+            buf: &mut self.buf,
+            opts,
+        }
+    }
+}
+
 pub fn write<W: Write, A: Arguments>(buffer: W, args: A) -> Result {
     let mut fmt = Formatter::new(buffer);
     args.fmt(&mut fmt)
@@ -120,10 +105,11 @@ mod _private {
     pub use mono_fmt_macro::__format_args;
 
     pub use crate::{
-        args::{ConstWidthArg, DebugArg, DisplayArg, Str},
-        opts::{
-            WithAlternate, WithFill, WithAlign, WithWidth,
+        args::{
+            BinaryArg, DebugArg, DisplayArg, LowerExpArg, LowerHexArg, OctalArg, Str, UpperExpArg,
+            UpperHexArg,
         },
+        opts::{WithAlign, WithAlternate, WithFill, WithWidth},
     };
 }
 
@@ -167,4 +153,15 @@ mod tests {
         let result = format!("a: {}", 32523532u64);
         assert_eq!(result, "a: 32523532");
     }
+}
+
+fn fmt() {
+    let a = (
+        _private::Str("amount: "),
+        _private::DebugArg::<_, _private::WithAlternate<()>>(5, _private::WithAlternate(())),
+    );
+
+    let mut str = String::new();
+    let mut f = Formatter::new(&mut str);
+    Arguments::fmt(&a, &mut f).unwrap();
 }
