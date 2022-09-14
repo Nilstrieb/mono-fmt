@@ -79,11 +79,11 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
     }
 }
 
-impl<W, O> Formatter<W, O> {
-    fn with_opts<'opt, ONew>(&mut self, opts: &'opt ONew) -> Formatter<&mut W, &'opt ONew> {
+impl<W, O: FmtOpts> Formatter<W, O> {
+    fn wrap_with<'opt, ONew: FmtOpts>(&mut self, opts: &ONew) -> Formatter<&mut W, ONew::ReplaceInnermost<O>> {
         Formatter {
             buf: &mut self.buf,
-            opts,
+            opts: opts.override_other(self.opts),
         }
     }
 }
@@ -155,6 +155,7 @@ mod tests {
     }
 }
 
+// testing
 fn fmt() {
     let a = (
         _private::Str("amount: "),
@@ -164,4 +165,6 @@ fn fmt() {
     let mut str = String::new();
     let mut f = Formatter::new(&mut str);
     Arguments::fmt(&a, &mut f).unwrap();
+
+    println!("{str}");
 }

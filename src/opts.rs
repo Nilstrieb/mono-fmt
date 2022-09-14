@@ -20,11 +20,23 @@ macro_rules! options {
             }
         )*
     ) => {
-        pub trait FmtOpts {
+        // FIXME: We can get rid of this Copy can't we
+        pub trait FmtOpts: Copy {
             #[doc(hidden)]
             type Inner: FmtOpts;
 
+            /// Replaces the innermost `()` with `I`
+            type ReplaceInnermost<I: FmtOpts>: FmtOpts;
+
             fn inner(&self) -> &Self::Inner;
+
+            /// # Example
+            /// `Self` is `WithAlternate<WithFill<(), ' '>>`
+            /// `Other` is WithMinus<()>
+            ///
+            /// This returns `WithAlternate<WithFille<WithMinus<()>, ' '>>`
+            ///
+            fn override_other<Other: FmtOpts>(self, other: Other) -> Self::ReplaceInnermost<Other>;
 
             $(
                 #[inline]
@@ -37,8 +49,14 @@ macro_rules! options {
         impl FmtOpts for () {
             type Inner = Self;
 
+            type ReplaceInnermost<I: FmtOpts> = I;
+
             fn inner(&self) -> &Self::Inner {
                 self
+            }
+
+            fn override_other<Other: FmtOpts>(self, other: Other) -> Self::ReplaceInnermost::<Other> {
+                other
             }
 
             $(
@@ -52,8 +70,14 @@ macro_rules! options {
         impl<O: FmtOpts> FmtOpts for &'_ O {
             type Inner = O::Inner;
 
-            fn inner(&self) ->  &Self::Inner {
+            type ReplaceInnermost<I: FmtOpts> = O::ReplaceInnermost<I>;
+
+            fn inner(&self) -> &Self::Inner {
                 O::inner(self)
+            }
+
+            fn override_other<Other: FmtOpts>(self, other: Other) -> Self::ReplaceInnermost<Other> {
+                O::override_other(*self, other)
             }
 
             $(
@@ -75,13 +99,20 @@ macro_rules! options {
         }
 
         $(
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
             pub struct $with_name<I, $($(const $const_gen_name: $with_ty),*)?>(#[doc(hidden)] pub I);
 
             impl<I: FmtOpts, $($(const $const_gen_name: $with_ty),*)?> FmtOpts for $with_name<I, $($($const_gen_name),*)?> {
                 type Inner = I;
 
+                type ReplaceInnermost<Replacement: FmtOpts> = $with_name<I::ReplaceInnermost<Replacement>, $($($const_gen_name),*)?>;
+
                 fn inner(&self) -> &Self::Inner  {
                     &self.0
+                }
+
+                fn override_other<Other: FmtOpts>(self, other: Other) -> Self::ReplaceInnermost<Other> {
+                    $with_name(self.0.override_other(other))
                 }
 
                 fn $name(&self) -> $ret {

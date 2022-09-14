@@ -59,7 +59,7 @@ macro_rules! traits {
 
             impl<T: $trait, O: FmtOpts> Arguments for $name<T, O> {
                 fn fmt<W: Write, OldOpts: FmtOpts>(&self, f: &mut Formatter<W, OldOpts>) -> Result {
-                    let mut f = f.with_opts(&self.1);
+                    let mut f = f.wrap_with(&self.1);
 
                     <T as $trait>::fmt(&self.0, &mut f)
                 }
