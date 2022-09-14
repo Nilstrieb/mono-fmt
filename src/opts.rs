@@ -91,6 +91,7 @@ macro_rules! options {
 
         impl<W, O: FmtOpts> Formatter<W, O> {
             $(
+                #[doc = concat!("Gets the `", stringify!($name), "` option from the underlying options type.")]
                 #[inline]
                 pub fn $name(&self) -> $ret {
                     O::$name(&self.opts)

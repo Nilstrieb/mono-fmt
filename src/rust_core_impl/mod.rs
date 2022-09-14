@@ -133,7 +133,7 @@ impl PostPadding {
 }
 
 impl<W: Write, O: FmtOpts> Formatter<W, O> {
-    pub fn pad_integral(&mut self, is_nonnegative: bool, prefix: &str, buf: &str) -> Result {
+    fn pad_integral(&mut self, is_nonnegative: bool, prefix: &str, buf: &str) -> Result {
         let mut width = buf.len();
 
         let mut sign = None;
