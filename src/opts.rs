@@ -124,23 +124,13 @@ macro_rules! options {
 }
 
 options!(
-    fn alternate(&self) -> bool {
-        false
-    }
-    struct WithAlternate {
-        true
-    }
+    fn alternate(&self) -> bool { false }
+    struct WithAlternate { true }
 
-    fn width(&self) -> Option<usize> {
-        None
-    }
-    struct WithWidth<const A: usize> {
-        Some(A)
-    }
+    fn width(&self) -> Option<usize> { None }
+    struct WithWidth<const A: usize> { Some(A) }
 
-    fn align(&self) -> Alignment {
-        Alignment::Unknown
-    }
+    fn align(&self) -> Alignment { Alignment::Unknown }
     struct WithAlign<const A: usize> {
         match A {
             0 => Alignment::Unknown,
@@ -151,53 +141,24 @@ options!(
         }
     }
 
+    fn fill(&self) -> char { ' ' }
+    struct WithFill<const A: char> { A }
 
-    fn fill(&self) -> char {
-        ' '
-    }
-    struct WithFill<const A: char> {
-        A
-    }
+    fn sign_plus(&self) -> bool { false }
+    struct WithSignPlus { true }
 
-    fn sign_plus(&self) -> bool {
-        false
-    }
-    struct WithSignPlus {
-        true
-    }
+    fn sign_aware_zero_pad(&self) -> bool { false }
+    struct WithSignAwareZeroPad { true }
 
-    fn sign_aware_zero_pad(&self) -> bool {
-        false
-    }
-    struct WithSignAwareZeroPad {
-        true
-    }
+    fn sign_minus(&self) -> bool { false }
+    struct WithMinus { true }
 
-    fn sign_minus(&self) -> bool {
-        false
-    }
-    struct WithMinus {
-        true
-    }
+    fn precision(&self) -> Option<usize> { None }
+    struct WithPrecision<const A: usize> { Some(A) }
 
-    fn precision(&self) -> Option<usize> {
-        None
-    }
-    struct WithPrecision<const A: usize> {
-        Some(A)
-    }
+    fn debug_lower_hex(&self) -> bool { false }
+    struct WithDebugLowerHex { true }
 
-    fn debug_lower_hex(&self) -> bool {
-        false
-    }
-    struct WithDebugLowerHex {
-        true
-    }
-
-    fn debug_upper_hex(&self) -> bool {
-        false
-    }
-    struct WithDebugUpperHex {
-        false
-    }
+    fn debug_upper_hex(&self) -> bool { false }
+    struct WithDebugUpperHex { false }
 );
