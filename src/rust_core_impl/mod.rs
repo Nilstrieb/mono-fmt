@@ -154,7 +154,11 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
 
         // Writes the sign if it exists, and then the prefix if it was requested
         #[inline(never)]
-        fn write_prefix<W: Write, O>(f: &mut Formatter<W, O>, sign: Option<char>, prefix: Option<&str>) -> Result {
+        fn write_prefix<W: Write, O>(
+            f: &mut Formatter<W, O>,
+            sign: Option<char>,
+            prefix: Option<&str>,
+        ) -> Result {
             if let Some(c) = sign {
                 f.buf.write_char(c)?;
             }
@@ -183,14 +187,16 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
             // is zero
             Some(min) if self.sign_aware_zero_pad() => {
                 write_prefix(self, sign, prefix)?;
-                let post_padding = self.padding(min - width, Alignment::Right, '0', Alignment::Right)?;
+                let post_padding =
+                    self.padding(min - width, Alignment::Right, '0', Alignment::Right)?;
                 self.buf.write_str(buf)?;
                 post_padding.write(self)?;
                 Ok(())
             }
             // Otherwise, the sign and prefix goes after the padding
             Some(min) => {
-                let post_padding = self.padding(min - width, Alignment::Right, self.fill(), self.align())?;
+                let post_padding =
+                    self.padding(min - width, Alignment::Right, self.fill(), self.align())?;
                 write_prefix(self, sign, prefix)?;
                 self.buf.write_str(buf)?;
                 post_padding.write(self)
@@ -221,7 +227,7 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
 
             // remaining parts go through the ordinary padding process.
             let len = formatted.len();
-            
+
             if width <= len {
                 // no padding
                 self.write_formatted_parts(&formatted)

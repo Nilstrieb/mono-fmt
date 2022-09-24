@@ -80,7 +80,10 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
 }
 
 impl<W, O: FmtOpts> Formatter<W, O> {
-    fn wrap_with<'opt, ONew: FmtOpts>(&mut self, opts: &ONew) -> Formatter<&mut W, ONew::ReplaceInnermost<O>> {
+    fn wrap_with<'opt, ONew: FmtOpts>(
+        &mut self,
+        opts: &ONew,
+    ) -> Formatter<&mut W, ONew::ReplaceInnermost<O>> {
         Formatter {
             buf: &mut self.buf,
             opts: opts.override_other(self.opts),
@@ -88,15 +91,19 @@ impl<W, O: FmtOpts> Formatter<W, O> {
     }
 }
 
-pub fn write<W: Write, A: Arguments>(buffer: W, args: A) -> Result {
-    let mut fmt = Formatter::new(buffer);
-    args.fmt(&mut fmt)
-}
+pub mod helpers {
+    use crate::{Arguments, Formatter, Result, Write};
 
-pub fn format<A: Arguments>(args: A) -> String {
-    let mut string = String::new();
-    write(&mut string, args).unwrap();
-    string
+    pub fn write<W: Write, A: Arguments>(buffer: W, args: A) -> Result {
+        let mut fmt = Formatter::new(buffer);
+        args.fmt(&mut fmt)
+    }
+
+    pub fn format<A: Arguments>(args: A) -> String {
+        let mut string = String::new();
+        write(&mut string, args).unwrap();
+        string
+    }
 }
 
 /// Not part of the public API.
@@ -116,7 +123,7 @@ mod _private {
 #[macro_export]
 macro_rules! format {
     ($($tt:tt)*) => {
-        $crate::format($crate::format_args!($($tt)*))
+        $crate::helpers::format($crate::format_args!($($tt)*))
     };
 }
 
@@ -153,18 +160,4 @@ mod tests {
         let result = format!("a: {}", 32523532u64);
         assert_eq!(result, "a: 32523532");
     }
-}
-
-// testing
-fn fmt() {
-    let a = (
-        _private::Str("amount: "),
-        _private::DebugArg::<_, _private::WithAlternate<()>>(5, _private::WithAlternate(())),
-    );
-
-    let mut str = String::new();
-    let mut f = Formatter::new(&mut str);
-    Arguments::fmt(&a, &mut f).unwrap();
-
-    println!("{str}");
 }

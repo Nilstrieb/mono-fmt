@@ -1,29 +1,33 @@
 //! a bunch of this code is adapted from [stylish](https://github.com/Nullus157/stylish-rs)
 #![allow(dead_code, unreachable_code, unused_variables)]
 
+use std::cell::Cell;
+
 use format::Parse as _;
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{ToTokens, quote};
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, Expr, ExprAssign, ExprPath, Ident, LitStr, PathArguments, Result, Token,
 };
+use to_tokens::Scoped;
 
 mod format;
 mod to_tokens;
 
 struct Input {
-    crate_ident: Ident,
-    format_str: String,
+    prefix: proc_macro2::TokenStream,
+    format_str: LitStr,
     positional_args: Vec<Expr>,
     named_args: Vec<(Ident, Expr)>,
 }
 
 impl Parse for Input {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let crate_ident = input.parse()?;
+        let crate_ident = input.parse::<syn::Path>()?;
+        let prefix = quote! { #crate_ident::_private };
 
-        let format_str = input.parse::<LitStr>()?.value();
+        let format_str = input.parse::<LitStr>()?;
 
         let mut positional_args = Vec::new();
         let mut named_args = Vec::new();
@@ -59,7 +63,7 @@ impl Parse for Input {
             }
         }
         Ok(Self {
-            crate_ident,
+            prefix,
             format_str,
             positional_args,
             named_args,
@@ -68,13 +72,12 @@ impl Parse for Input {
 }
 
 fn format_args_impl(input: Input) -> syn::Result<TokenStream> {
-    todo!();
-    let (_, fmt_parts) = format::Format::parse(&input.format_str).unwrap();
+    let str = input.format_str.value();
+    let (_, fmt_parts) = format::Format::parse(&str).unwrap();
 
-    Ok(quote! {
-        fmt_parts
-    }
-    .into())
+    let current_position = Cell::new(0);
+
+    Ok(Scoped::new(&input, &fmt_parts, &current_position).to_token_stream().into())
 }
 
 #[proc_macro]
