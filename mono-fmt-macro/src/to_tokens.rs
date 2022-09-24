@@ -5,7 +5,8 @@ use quote::{quote, ToTokens};
 
 use crate::{
     format::{
-        Align, Count, Format, FormatArg, FormatArgRef, FormatTrait, FormatterArgs, Piece, Sign,
+        Align, Count, DebugHex, Format, FormatArg, FormatArgRef, FormatTrait, FormatterArgs, Piece,
+        Sign,
     },
     Input,
 };
@@ -148,6 +149,14 @@ fn opt_value_tokens(scope: Scoped<'_, FormatterArgs<'_>>) -> TokenStream {
         opts = quote! { #prefix::WithSignAwareZeroPad(#opts) };
     }
 
+    if let Some(DebugHex::Lower) = args.debug_hex {
+        opts = quote! { #prefix::WithDebugLowerHex(#opts) };
+    }
+
+    if let Some(DebugHex::Upper) = args.debug_hex {
+        opts = quote! { #prefix::WithDebugUpperHex(#opts) };
+    }
+
     opts
 }
 
@@ -195,6 +204,14 @@ fn opt_ty_tokens(scope: Scoped<'_, FormatterArgs<'_>>) -> TokenStream {
 
     if args.zero {
         opts = quote! { #prefix::WithSignAwareZeroPad<#opts> };
+    }
+
+    if let Some(DebugHex::Lower) = args.debug_hex {
+        opts = quote! { #prefix::WithDebugLowerHex<#opts> };
+    }
+
+    if let Some(DebugHex::Upper) = args.debug_hex {
+        opts = quote! { #prefix::WithDebugUpperHex<#opts> };
     }
 
     opts

@@ -115,14 +115,23 @@ fn test_format_int_exp_limits() {
     assert_eq!(format!("{:e}", i32::MAX), "2.147483647e9");
     assert_eq!(format!("{:e}", i64::MIN), "-9.223372036854775808e18");
     assert_eq!(format!("{:e}", i64::MAX), "9.223372036854775807e18");
-    assert_eq!(format!("{:e}", i128::MIN), "-1.70141183460469231731687303715884105728e38");
-    assert_eq!(format!("{:e}", i128::MAX), "1.70141183460469231731687303715884105727e38");
+    assert_eq!(
+        format!("{:e}", i128::MIN),
+        "-1.70141183460469231731687303715884105728e38"
+    );
+    assert_eq!(
+        format!("{:e}", i128::MAX),
+        "1.70141183460469231731687303715884105727e38"
+    );
 
     assert_eq!(format!("{:e}", u8::MAX), "2.55e2");
     assert_eq!(format!("{:e}", u16::MAX), "6.5535e4");
     assert_eq!(format!("{:e}", u32::MAX), "4.294967295e9");
     assert_eq!(format!("{:e}", u64::MAX), "1.8446744073709551615e19");
-    assert_eq!(format!("{:e}", u128::MAX), "3.40282366920938463463374607431768211455e38");
+    assert_eq!(
+        format!("{:e}", u128::MAX),
+        "3.40282366920938463463374607431768211455e38"
+    );
 }
 
 #[test]
@@ -132,7 +141,10 @@ fn test_format_int_exp_precision() {
     assert_eq!(format!("{:.10e}", i16::MIN), "-3.2768000000e4");
     assert_eq!(format!("{:.10e}", i32::MIN), "-2.1474836480e9");
     assert_eq!(format!("{:.20e}", i64::MIN), "-9.22337203685477580800e18");
-    assert_eq!(format!("{:.40e}", i128::MIN), "-1.7014118346046923173168730371588410572800e38");
+    assert_eq!(
+        format!("{:.40e}", i128::MIN),
+        "-1.7014118346046923173168730371588410572800e38"
+    );
 
     //test rounding
     assert_eq!(format!("{:.1e}", i8::MIN), "-1.3e2");

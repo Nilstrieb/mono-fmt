@@ -247,13 +247,13 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         &mut self,
         padding: usize,
         default: Alignment,
-        actual_fill: char,
-        actual_align: Alignment,
+        self_fill: char,
+        self_align: Alignment,
     ) -> std::result::Result<PostPadding, Error> {
         // WARN: We might have `self` in an invalid state, don't touch `self` opts
-        let align = match actual_align {
+        let align = match self_align {
             Alignment::Unknown => default,
-            _ => actual_align,
+            _ => self_align,
         };
 
         let (pre_pad, post_pad) = match align {
@@ -263,10 +263,10 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         };
 
         for _ in 0..pre_pad {
-            self.buf.write_char(actual_fill)?;
+            self.buf.write_char(self_fill)?;
         }
 
-        Ok(PostPadding::new(actual_fill, post_pad))
+        Ok(PostPadding::new(self_fill, post_pad))
     }
 
     fn write_formatted_parts(&mut self, formatted: &numfmt::Formatted<'_>) -> Result {
@@ -355,7 +355,7 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
                 else {
                     let align = Alignment::Left;
                     let post_padding =
-                        self.padding(width - chars_count, Alignment::Right, self.fill(), align)?;
+                        self.padding(width - chars_count, align, self.fill(), self.align())?;
                     self.buf.write_str(s)?;
                     post_padding.write(self)
                 }

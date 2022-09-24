@@ -40,13 +40,12 @@ mod pointers {
         }
     }
 
-
     impl<T: ?Sized> Pointer for &T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
             Pointer::fmt(&(*self as *const T), f)
         }
     }
-    
+
     impl<T: ?Sized> Pointer for &mut T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
             Pointer::fmt(&(&**self as *const T), f)
@@ -57,6 +56,11 @@ mod pointers {
         ptr_addr: usize,
         f: &mut Formatter<W, O>,
     ) -> Result {
+        fn tail<W: Write, O: FmtOpts>(f: &mut Formatter<W, O>, ptr_addr: usize) -> Result {
+            let mut f = f.wrap_with(&crate::opts::WithAlternate(()));
+            LowerHex::fmt(&ptr_addr, &mut f)
+        }
+
         // The alternate flag is already treated by LowerHex as being special-
         // it denotes whether to prefix with 0x. We use it to work out whether
         // or not to zero extend, and then unconditionally set it to get the
@@ -69,22 +73,13 @@ mod pointers {
 
                 let mut f = f.wrap_with(&crate::opts::WithWidth::<(), WIDTH>(()));
 
-                let mut f = f.wrap_with(&crate::opts::WithAlternate(()));
-                let ret = LowerHex::fmt(&ptr_addr, &mut f);
-
-                return ret;
+                tail(&mut f, ptr_addr)
+            } else {
+                tail(&mut f, ptr_addr)
             }
-
-            let mut f = f.wrap_with(&crate::opts::WithAlternate(()));
-            let ret = LowerHex::fmt(&ptr_addr, &mut f);
-
-            return ret;
+        } else {
+            tail(f, ptr_addr)
         }
-
-        let mut f = f.wrap_with(&crate::opts::WithAlternate(()));
-        let ret = LowerHex::fmt(&ptr_addr, &mut f);
-
-        ret
     }
 }
 

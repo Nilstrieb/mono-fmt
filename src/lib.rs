@@ -121,4 +121,10 @@ mod tests {
         let result = format!("a: {}", 32523532u64);
         assert_eq!(result, "a: 32523532");
     }
+
+    #[test]
+    fn escape() {
+        let result = format!("a: {{{}}}", 6);
+        assert_eq!(result, "a: {6}");
+    }
 }

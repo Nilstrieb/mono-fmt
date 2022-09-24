@@ -5,7 +5,7 @@ use std::cell::Cell;
 
 use format::Parse as _;
 use proc_macro::TokenStream;
-use quote::{ToTokens, quote};
+use quote::{quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, Expr, ExprAssign, ExprPath, Ident, LitStr, PathArguments, Result, Token,
@@ -77,7 +77,9 @@ fn format_args_impl(input: Input) -> syn::Result<TokenStream> {
 
     let current_position = Cell::new(0);
 
-    Ok(Scoped::new(&input, &fmt_parts, &current_position).to_token_stream().into())
+    Ok(Scoped::new(&input, &fmt_parts, &current_position)
+        .to_token_stream()
+        .into())
 }
 
 #[proc_macro]
