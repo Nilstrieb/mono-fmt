@@ -6,12 +6,6 @@ mod impl_prelude {
     pub use crate::*;
 }
 
-impl<T: Debug + ?Sized> Debug for &T {
-    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-        <T as Debug>::fmt(&self, f)
-    }
-}
-
 impl<T: Debug, const N: usize> Debug for [T; N] {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
         <[T] as Debug>::fmt(&&self[..], f)
@@ -93,6 +87,38 @@ mod char {
             } else {
                 f.pad(self.encode_utf8(&mut [0; 4]))
             }
+        }
+    }
+}
+
+mod strings {
+    use super::impl_prelude::*;
+
+    impl Display for String {
+        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+            f.write_str(self)
+        }
+    }
+
+    impl Display for str {
+        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+            f.write_str(self)
+        }
+    }
+
+    impl Debug for str {
+        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+            f.write_char('"')?;
+            f.write_str(self)?;
+            f.write_char('"')
+        }
+    }
+
+    impl Debug for String {
+        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+            f.write_char('"')?;
+            f.write_str(self)?;
+            f.write_char('"')
         }
     }
 }

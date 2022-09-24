@@ -48,6 +48,13 @@ impl Arguments for Str {
     }
 }
 
+macro_rules! not_for_pointer {
+    (Pointer $($tt:tt)*) => {};
+    ($_not_pointer:ident $($tt:tt)*) => {
+        $($tt)*
+    }
+}
+
 macro_rules! traits {
     ($(struct $name:ident: trait $trait:ident);* $(;)?) => {
         $(
@@ -62,6 +69,24 @@ macro_rules! traits {
                     let mut f = f.wrap_with(&self.1);
 
                     <T as $trait>::fmt(&self.0, &mut f)
+                }
+            }
+        )*
+
+        $(
+            not_for_pointer! {
+                $trait
+
+                impl<T: $trait + ?Sized> $trait for &T {
+                    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+                        <T as $trait>::fmt(&self, f)
+                    }
+                }
+
+                impl<T: $trait + ?Sized> $trait for &mut T {
+                    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+                        <T as $trait>::fmt(&self, f)
+                    }
                 }
             }
         )*
