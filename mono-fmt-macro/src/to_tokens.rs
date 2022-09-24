@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
@@ -90,12 +90,13 @@ impl ToTokens for Scoped<'_, FormatArg<'_>> {
                 .iter()
                 .find(|(arg, _)| arg == name)
                 .map(|(_, expr)| expr.to_token_stream())
-                .unwrap_or_else(|| Ident::new(name, Span::call_site()).to_token_stream()),
+                .unwrap_or_else(|| {
+                    Ident::new(name, self.input.format_str.span()).to_token_stream()
+                }),
         };
 
         let opt_ty = opt_ty_tokens(self.scope(&self.inner.format_spec.formatter_args));
         let opt_values = opt_value_tokens(self.scope(&self.inner.format_spec.formatter_args));
-
 
         tokens.extend(quote! { #prefix::#base::<_, #opt_ty>(#expr, #opt_values) })
     }

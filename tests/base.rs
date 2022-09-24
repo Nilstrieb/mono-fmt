@@ -1,5 +1,3 @@
-use mono_fmt::{FmtOpts, Write};
-
 #[macro_use]
 extern crate mono_fmt;
 
