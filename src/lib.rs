@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod args;
+mod formatter;
 mod opts;
 mod rust_core_impl;
 mod write;
@@ -13,18 +14,23 @@ macro_rules! format_args {
 }
 
 pub use crate::{
-    args::{Arguments, Binary, Debug, Display, LowerExp, LowerHex, Octal, UpperExp, UpperHex},
+    args::{pub_exports::*, Arguments},
+    formatter::Formatter,
     opts::FmtOpts,
 };
 
 pub type Result = std::result::Result<(), Error>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Error;
 
 pub trait Write {
     fn write_str(&mut self, str: &str) -> Result;
-    fn write_char(&mut self, char: char) -> Result;
+
+    fn write_char(&mut self, char: char) -> Result {
+        let mut buf = [0; 4];
+        self.write_str(char.encode_utf8(&mut buf))
+    }
 }
 
 impl Write for String {
@@ -49,48 +55,6 @@ impl<W: Write> Write for &mut W {
     }
 }
 
-pub struct Formatter<W, O> {
-    buf: W,
-    opts: O,
-}
-
-impl<W: Write, O: FmtOpts> core::fmt::Write for Formatter<W, O> {
-    fn write_char(&mut self, c: char) -> std::fmt::Result {
-        self.buf.write_char(c).map_err(|_| std::fmt::Error)
-    }
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        self.buf.write_str(s).map_err(|_| std::fmt::Error)
-    }
-}
-
-impl<W> Formatter<W, ()> {
-    fn new(buf: W) -> Self {
-        Self { buf, opts: () }
-    }
-}
-
-impl<W: Write, O: FmtOpts> Formatter<W, O> {
-    pub fn write_char(&mut self, char: char) -> Result {
-        self.buf.write_char(char)
-    }
-
-    pub fn write_str(&mut self, str: &str) -> Result {
-        self.buf.write_str(str)
-    }
-}
-
-impl<W, O: FmtOpts> Formatter<W, O> {
-    fn wrap_with<'opt, ONew: FmtOpts>(
-        &mut self,
-        opts: &ONew,
-    ) -> Formatter<&mut W, ONew::ReplaceInnermost<O>> {
-        Formatter {
-            buf: &mut self.buf,
-            opts: opts.override_other(self.opts),
-        }
-    }
-}
-
 pub mod helpers {
     use crate::{Arguments, Formatter, Result, Write};
 
@@ -108,15 +72,12 @@ pub mod helpers {
 
 /// Not part of the public API.
 #[doc(hidden)]
-mod _private {
+pub mod _private {
     pub use mono_fmt_macro::__format_args;
 
     pub use crate::{
-        args::{
-            BinaryArg, DebugArg, DisplayArg, LowerExpArg, LowerHexArg, OctalArg, Str, UpperExpArg,
-            UpperHexArg,
-        },
-        opts::{WithAlign, WithAlternate, WithFill, WithWidth},
+        args::{macro_exports::*, Str},
+        opts::exports::*,
     };
 }
 

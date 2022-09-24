@@ -65,6 +65,14 @@ macro_rules! traits {
                 }
             }
         )*
+
+        pub mod macro_exports {
+            pub use super::{$($name, $trait),*};
+        }
+
+        pub mod pub_exports {
+            pub use super::{$($name, $trait),*};
+        }
     };
 }
 
@@ -77,4 +85,5 @@ traits!(
     struct UpperHexArg: trait UpperHex;
     struct UpperExpArg: trait UpperExp;
     struct LowerExpArg: trait LowerExp;
+    struct PointerArg: trait Pointer;
 );

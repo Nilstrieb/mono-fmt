@@ -1,5 +1,6 @@
 //! Copied modified stuff from core
 
+mod aggregated;
 mod num;
 
 use crate::{opts::Alignment, Error, FmtOpts, Formatter, Result, Write};

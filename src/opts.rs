@@ -121,6 +121,10 @@ macro_rules! options {
                 }
             }
         )*
+
+        pub mod exports {
+            pub use super::{$($with_name),*};
+        }
     };
 }
 
