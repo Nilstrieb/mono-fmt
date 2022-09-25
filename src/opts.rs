@@ -8,6 +8,13 @@ pub enum Alignment {
     Unknown,
 }
 
+mod sealed {
+    pub trait SealedOpts {}
+
+    impl SealedOpts for () {}
+    impl<O: super::FmtOpts> SealedOpts for &'_ O {}
+}
+
 macro_rules! options {
     (
         $(
@@ -21,7 +28,7 @@ macro_rules! options {
         )*
     ) => {
         // FIXME: We can get rid of this Copy can't we
-        pub trait FmtOpts: Copy {
+        pub trait FmtOpts: sealed::SealedOpts + Copy {
             #[doc(hidden)]
             type Inner: FmtOpts;
 
@@ -102,6 +109,8 @@ macro_rules! options {
         $(
             #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
             pub struct $with_name<I, $($(const $const_gen_name: $with_ty),*)?>(#[doc(hidden)] pub I);
+
+            impl<I: FmtOpts, $($(const $const_gen_name: $with_ty),*)?> sealed::SealedOpts for $with_name<I, $($($const_gen_name),*)?> {}
 
             impl<I: FmtOpts, $($(const $const_gen_name: $with_ty),*)?> FmtOpts for $with_name<I, $($($const_gen_name),*)?> {
                 type Inner = I;
