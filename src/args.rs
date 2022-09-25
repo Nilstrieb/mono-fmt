@@ -4,27 +4,26 @@ pub trait Arguments {
 }
 
 macro_rules! tuple_args {
-        () => {};
-        ($first:ident $($rest:ident)*) => {
-            impl<$first, $($rest),*> Arguments for ($first, $($rest),*)
-            where
-               $first: Arguments,
-               $($rest: Arguments),*
-            {
-                #[allow(non_snake_case)]
-                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-                    let ($first, $($rest),*) = self;
-                    Arguments::fmt($first, f)?;
-                    $(
-                        Arguments::fmt($rest, f)?;
-                    )*
-                    Ok(())
-                }
+    () => {};
+    ($first:ident $($rest:ident)*) => {
+        impl<$first, $($rest),*> Arguments for ($first, $($rest),*)
+        where
+           $first: Arguments,
+           $($rest: Arguments),*
+        {
+            #[allow(non_snake_case)]
+            fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+                let ($first, $($rest),*) = self;
+                Arguments::fmt($first, f)?;
+                $(
+                    Arguments::fmt($rest, f)?;
+                )*
+                Ok(())
             }
-
-            tuple_args!($($rest)*);
-        };
-    }
+        }
+        tuple_args!($($rest)*);
+    };
+}
 
 #[rustfmt::skip]
 tuple_args!(
@@ -49,15 +48,15 @@ impl Arguments for Str {
 }
 
 macro_rules! traits {
-    ($($(#[$no_reference_blanket_impl:ident])? struct $name:ident: trait $trait:ident);* $(;)?) => {
+    ($($(#[$no_reference_blanket_impl:ident])? struct $arg_name:ident: trait $trait:ident);* $(;)?) => {
         $(
-            pub struct $name<T, O>(pub T, pub O);
+            pub struct $arg_name<T, O>(pub T, pub O);
 
             pub trait $trait {
                 fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
             }
 
-            impl<T: $trait, O: FmtOpts> Arguments for $name<T, O> {
+            impl<T: $trait, O: FmtOpts> Arguments for $arg_name<T, O> {
                 fn fmt<W: Write, OldOpts: FmtOpts>(&self, f: &mut Formatter<W, OldOpts>) -> Result {
                     let mut f = f.wrap_with(&self.1);
 
@@ -84,11 +83,11 @@ macro_rules! traits {
         )*
 
         pub mod macro_exports {
-            pub use super::{$($name, $trait),*};
+            pub use super::{$($arg_name, $trait),*};
         }
 
         pub mod pub_exports {
-            pub use super::{$($name, $trait),*};
+            pub use super::{$($trait),*};
         }
     };
 }
