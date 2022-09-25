@@ -92,8 +92,21 @@ mod char {
 }
 
 mod strings {
+    #[cfg(feature = "alloc")]
+    use alloc::string::String;
+
     use super::impl_prelude::*;
 
+    #[cfg(feature = "alloc")]
+    impl Debug for String {
+        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+            f.write_char('"')?;
+            f.write_str(self)?;
+            f.write_char('"')
+        }
+    }
+
+    #[cfg(feature = "alloc")]
     impl Display for String {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
             f.write_str(self)
@@ -107,14 +120,6 @@ mod strings {
     }
 
     impl Debug for str {
-        fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-            f.write_char('"')?;
-            f.write_str(self)?;
-            f.write_char('"')
-        }
-    }
-
-    impl Debug for String {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
             f.write_char('"')?;
             f.write_str(self)?;

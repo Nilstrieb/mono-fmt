@@ -1,4 +1,7 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 #![allow(dead_code)]
+
+extern crate alloc;
 
 mod args;
 mod formatter;
@@ -19,7 +22,7 @@ pub use crate::{
     opts::FmtOpts,
 };
 
-pub type Result = std::result::Result<(), Error>;
+pub type Result = core::result::Result<(), Error>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Error;
@@ -34,6 +37,9 @@ pub trait Write {
 }
 
 pub mod helpers {
+    #[cfg(feature = "alloc")]
+    use alloc::string::String;
+
     use crate::{Arguments, Formatter, Result, Write};
 
     pub fn write<W: Write, A: Arguments>(buffer: W, args: A) -> Result {
@@ -41,6 +47,7 @@ pub mod helpers {
         args.fmt(&mut fmt)
     }
 
+    #[cfg(feature = "alloc")]
     pub fn format<A: Arguments>(args: A) -> String {
         let mut string = String::new();
         write(&mut string, args).unwrap();
@@ -59,6 +66,7 @@ pub mod _private {
     };
 }
 
+#[cfg(feature = "alloc")]
 #[macro_export]
 macro_rules! format {
     ($($tt:tt)*) => {

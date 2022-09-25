@@ -1,6 +1,6 @@
 //! Integer and floating-point number formatting
 
-use std::{
+use core::{
     mem::MaybeUninit,
     ops::{Div, Rem, Sub},
     ptr, slice, str,
@@ -223,7 +223,7 @@ macro_rules! impl_Display {
             // is safe to access.
             unsafe {
                 // need at least 16 bits for the 4-characters-at-a-time to work.
-                assert!(std::mem::size_of::<$u>() >= 2);
+                assert!(core::mem::size_of::<$u>() >= 2);
 
                 // eagerly decode 4 characters at a time
                 while n >= 10000 {

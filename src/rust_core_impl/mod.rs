@@ -249,7 +249,7 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         default: Alignment,
         self_fill: char,
         self_align: Alignment,
-    ) -> std::result::Result<PostPadding, Error> {
+    ) -> core::result::Result<PostPadding, Error> {
         // WARN: We might have `self` in an invalid state, don't touch `self` opts
         let align = match self_align {
             Alignment::Unknown => default,
@@ -279,7 +279,7 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
             // in a bad value for `buf` into `numfmt::to_shortest_str` since it is a
             // public function.
             // FIXME: Determine whether this could result in UB.
-            buf.write_str(unsafe { std::str::from_utf8_unchecked(s) })
+            buf.write_str(unsafe { core::str::from_utf8_unchecked(s) })
         }
 
         if !formatted.sign.is_empty() {

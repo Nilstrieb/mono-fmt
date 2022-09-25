@@ -6,11 +6,11 @@ pub struct Formatter<W, O> {
 }
 
 impl<W: Write, O: FmtOpts> core::fmt::Write for Formatter<W, O> {
-    fn write_char(&mut self, c: char) -> std::fmt::Result {
-        self.buf.write_char(c).map_err(|_| std::fmt::Error)
+    fn write_char(&mut self, c: char) -> core::fmt::Result {
+        self.buf.write_char(c).map_err(|_| core::fmt::Error)
     }
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        self.buf.write_str(s).map_err(|_| std::fmt::Error)
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.buf.write_str(s).map_err(|_| core::fmt::Error)
     }
 }
 

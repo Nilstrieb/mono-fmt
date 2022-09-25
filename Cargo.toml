@@ -13,3 +13,8 @@ edition = "2021"
 
 [dependencies]
 mono-fmt-macro = { path = "./mono-fmt-macro" }
+
+[features]
+alloc = []
+std = ["alloc"]
+default = ["std"]
