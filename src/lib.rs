@@ -18,7 +18,7 @@ macro_rules! format_args {
 
 pub use crate::{
     args::{pub_exports::*, Arguments},
-    formatter::Formatter,
+    formatter::{DebugList, DebugMap, DebugSet, DebugStruct, DebugTuple, Formatter},
     opts::FmtOpts,
 };
 
@@ -112,5 +112,12 @@ mod tests {
     fn escape() {
         let result = format!("a: {{{}}}", 6);
         assert_eq!(result, "a: {6}");
+    }
+}
+
+pub mod uwu {
+    fn test_format_debug_hex() {
+        assert_eq!(format!("{:02x?}", b"Foo\0"), "[46, 6f, 6f, 00]");
+        assert_eq!(format!("{:02X?}", b"Foo\0"), "[46, 6F, 6F, 00]");
     }
 }

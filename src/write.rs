@@ -1,4 +1,4 @@
-use crate::{Result, Write};
+use crate::{Error, Result, Write};
 
 impl<W: Write> Write for &mut W {
     fn write_str(&mut self, str: &str) -> Result {
@@ -10,12 +10,21 @@ impl<W: Write> Write for &mut W {
     }
 }
 
+/// Write is implemented for `&mut [u8]` by copying into the slice, overwriting
+/// its data.
+///
+/// Note that writing updates the slice to point to the yet unwritten part.
+/// The slice will be empty when it has been completely overwritten.
 impl Write for &'_ mut [u8] {
     fn write_str(&mut self, str: &str) -> Result {
         let data = str.as_bytes();
-        let amt = core::cmp::min(str.len(), self.len());
-        let (a, b) = core::mem::replace(self, &mut []).split_at_mut(amt);
-        a.copy_from_slice(&data[..amt]);
+
+        if data.len() > self.len() {
+            return Err(Error);
+        }
+
+        let (a, b) = core::mem::replace(self, &mut []).split_at_mut(data.len());
+        a.copy_from_slice(data);
         *self = b;
         Ok(())
     }
@@ -72,25 +81,23 @@ mod std_impls {
         net, process,
     };
 
-    use crate::Result;
-
-    trait IoWriteForwad: IoWrite {
-        fn write_str(&mut self, str: &str) -> Result {
-            <Self as IoWrite>::write_all(self, str.as_bytes()).map_err(|_| crate::Error)
-        }
-
-        fn write_char(&mut self, char: char) -> Result {
-            let mut buf = [0; 4];
-
-            <Self as IoWrite>::write_all(self, char.encode_utf8(&mut buf).as_bytes())
-                .map_err(|_| crate::Error)
-        }
-    }
+    use crate::{Result, Write};
 
     macro_rules! impl_io_forward {
         ($($name:ty),* $(,)?) => {
             $(
-                impl IoWriteForwad for $name {}
+                impl Write for $name {
+                    fn write_str(&mut self, str: &str) -> Result {
+                        <Self as IoWrite>::write_all(self, str.as_bytes()).map_err(|_| crate::Error)
+                    }
+
+                    fn write_char(&mut self, char: char) -> Result {
+                        let mut buf = [0; 4];
+
+                        <Self as IoWrite>::write_all(self, char.encode_utf8(&mut buf).as_bytes())
+                            .map_err(|_| crate::Error)
+                    }
+                }
             )*
         };
     }

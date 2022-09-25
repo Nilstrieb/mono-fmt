@@ -165,5 +165,5 @@ options!(
     struct WithDebugLowerHex { true }
 
     fn debug_upper_hex(&self) -> bool { false }
-    struct WithDebugUpperHex { false }
+    struct WithDebugUpperHex { true }
 );
