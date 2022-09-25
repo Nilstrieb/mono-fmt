@@ -48,15 +48,8 @@ impl Arguments for Str {
     }
 }
 
-macro_rules! not_for_pointer {
-    (Pointer $($tt:tt)*) => {};
-    ($_not_pointer:ident $($tt:tt)*) => {
-        $($tt)*
-    }
-}
-
 macro_rules! traits {
-    ($(struct $name:ident: trait $trait:ident);* $(;)?) => {
+    ($($(#[$no_reference_blanket_impl:ident])? struct $name:ident: trait $trait:ident);* $(;)?) => {
         $(
             pub struct $name<T, O>(pub T, pub O);
 
@@ -74,21 +67,20 @@ macro_rules! traits {
         )*
 
         $(
-            not_for_pointer! {
-                $trait
-
-                impl<T: $trait + ?Sized> $trait for &T {
-                    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-                        <T as $trait>::fmt(&self, f)
-                    }
-                }
-
-                impl<T: $trait + ?Sized> $trait for &mut T {
-                    fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-                        <T as $trait>::fmt(&self, f)
-                    }
+            $( #[cfg(all(any(), $no_reference_blanket_impl))] )?
+            impl<T: $trait + ?Sized> $trait for &T {
+                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+                    <T as $trait>::fmt(&self, f)
                 }
             }
+
+            $( #[cfg(all(any(), $no_reference_blanket_impl))] )?
+            impl<T: $trait + ?Sized> $trait for &mut T {
+                fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
+                    <T as $trait>::fmt(&self, f)
+                }
+            }
+
         )*
 
         pub mod macro_exports {
@@ -110,5 +102,6 @@ traits!(
     struct UpperHexArg: trait UpperHex;
     struct UpperExpArg: trait UpperExp;
     struct LowerExpArg: trait LowerExp;
+    #[no_reference_blanket_impl]
     struct PointerArg: trait Pointer;
 );
