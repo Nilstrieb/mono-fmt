@@ -35,4 +35,18 @@ fn dont_move() {
     let string = "uwu".to_string();
     let _ = format!("{string}");
     assert_eq!("uwu", string);
+
+    let string = "owo".to_string();
+    let _ = format!("{0}{0}", string);
+    assert_eq!("owo", string);
+}
+
+
+#[test]
+fn ptr_correct_addr() {
+    static STATIC: u8 = 0;
+    let addr = std::format!("{:p}", (&STATIC) as *const u8);
+    let fmt = format!("{:p}", &STATIC);
+
+    assert_eq!(addr, fmt);
 }

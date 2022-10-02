@@ -1,5 +1,7 @@
 //! Integer and floating-point number formatting
 
+#![allow(clippy::pedantic)]
+
 use core::{
     mem::MaybeUninit,
     ops::{Div, Rem, Sub},

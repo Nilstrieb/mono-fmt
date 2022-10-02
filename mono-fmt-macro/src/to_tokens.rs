@@ -76,7 +76,7 @@ impl ToTokens for Scoped<'_, Format<'_>> {
 
         tokens.extend(quote! {
             #[allow(unused_parens)]
-            match (#(#args),*) {
+            match (#(&#args),*) {
                 (#(#idents),*) => (
                     #(#parts),*
                 )
@@ -111,16 +111,19 @@ impl ToTokens for Scoped<'_, FormatArg<'_>> {
                 let current_position = self.current_position.get();
                 self.current_position.set(current_position + 1);
 
-                pos_arg_ident(current_position)
+                pos_arg_ident(current_position).to_token_stream()
             }
-            Some(FormatArgRef::Positional(idx)) => pos_arg_ident(idx),
+            Some(FormatArgRef::Positional(idx)) => pos_arg_ident(idx).to_token_stream(),
             Some(FormatArgRef::Named(name)) => self
                 .input
                 .named_args
                 .iter()
                 .find(|(arg, _)| arg == name)
-                .map(|(name, _)| named_arg_ident(name))
-                .unwrap_or_else(|| Ident::new(name, self.input.format_str.span())),
+                .map(|(name, _)| named_arg_ident(name).to_token_stream())
+                .unwrap_or_else(|| {
+                    let ident = Ident::new(name, self.input.format_str.span());
+                    quote! { &#ident }
+                }),
         };
 
         let opt_ty = opt_ty_tokens(self.scope(&self.inner.format_spec.formatter_args));

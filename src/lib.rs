@@ -121,14 +121,11 @@ pub mod uwu {
     fn test_expansion() {
         let evil = Cell::new(0);
         format!(
-            "{0}{0}{1}{owo}",
+            "{0}{0}",
             {
                 evil.set(evil.get() + 1);
                 0
             },
-            5,
-            owo = "owo",
         );
-        // assert_eq!(evil.get(), 1);
     }
 }

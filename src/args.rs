@@ -50,13 +50,13 @@ impl Arguments for Str {
 macro_rules! traits {
     ($($(#[$no_reference_blanket_impl:ident])? struct $arg_name:ident: trait $trait:ident);* $(;)?) => {
         $(
-            pub struct $arg_name<T, O>(pub T, pub O);
+            pub struct $arg_name<'a, T: ?Sized, O>(pub &'a T, pub O);
 
             pub trait $trait {
                 fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result;
             }
 
-            impl<T: $trait, O: FmtOpts> Arguments for $arg_name<T, O> {
+            impl<T: $trait + ?Sized, O: FmtOpts> Arguments for $arg_name<'_, T, O> {
                 fn fmt<W: Write, OldOpts: FmtOpts>(&self, f: &mut Formatter<W, OldOpts>) -> Result {
                     let mut f = f.wrap_with(&self.1);
 
