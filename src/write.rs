@@ -23,7 +23,7 @@ impl Write for &'_ mut [u8] {
             return Err(Error);
         }
 
-        let (a, b) = core::mem::replace(self, &mut []).split_at_mut(data.len());
+        let (a, b) = core::mem::take(self).split_at_mut(data.len());
         a.copy_from_slice(data);
         *self = b;
         Ok(())

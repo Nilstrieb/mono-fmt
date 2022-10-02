@@ -29,3 +29,10 @@ fn only_eval_once() {
     });
     assert_eq!(evil.get(), 1);
 }
+
+#[test]
+fn dont_move() {
+    let string = "uwu".to_string();
+    let _ = format!("{string}");
+    assert_eq!("uwu", string);
+}

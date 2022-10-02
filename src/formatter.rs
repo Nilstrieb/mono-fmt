@@ -29,15 +29,15 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         self.buf.write_str(str)
     }
 
-    pub fn debug_list<'b>(&'b mut self) -> DebugList<'b, W, O> {
+    pub fn debug_list(&mut self) -> DebugList<'_, W, O> {
         debug_list_new(self)
     }
 
-    pub fn debug_set<'b>(&'b mut self) -> DebugSet<'b, W, O> {
+    pub fn debug_set(&mut self) -> DebugSet<'_, W, O> {
         debug_set_new(self)
     }
 
-    pub fn debug_map<'b>(&'b mut self) -> DebugMap<'b, W, O> {
+    pub fn debug_map(&mut self) -> DebugMap<'_, W, O> {
         debug_map_new(self)
     }
 
@@ -311,9 +311,9 @@ pub struct DebugSet<'a, W, O> {
     inner: DebugInner<'a, W, O>,
 }
 
-pub(super) fn debug_set_new<'a, W: Write, O: FmtOpts>(
-    fmt: &'a mut fmt::Formatter<W, O>,
-) -> DebugSet<'a, W, O> {
+pub(super) fn debug_set_new<W: Write, O: FmtOpts>(
+    fmt: &mut fmt::Formatter<W, O>,
+) -> DebugSet<'_, W, O> {
     let result = fmt.write_str("{");
     DebugSet {
         inner: DebugInner {
@@ -354,9 +354,9 @@ pub struct DebugList<'a, W, O> {
     inner: DebugInner<'a, W, O>,
 }
 
-pub(super) fn debug_list_new<'a, W: Write, O: FmtOpts>(
-    fmt: &'a mut fmt::Formatter<W, O>,
-) -> DebugList<'a, W, O> {
+pub(super) fn debug_list_new<W: Write, O: FmtOpts>(
+    fmt: &mut fmt::Formatter<W, O>,
+) -> DebugList<'_, W, O> {
     let result = fmt.write_str("[");
     DebugList {
         inner: DebugInner {
@@ -402,9 +402,9 @@ pub struct DebugMap<'a, W, O> {
     state: PadAdapterState,
 }
 
-pub(super) fn debug_map_new<'a, 'b, W: Write, O: FmtOpts>(
-    fmt: &'a mut fmt::Formatter<W, O>,
-) -> DebugMap<'a, W, O> {
+pub(super) fn debug_map_new<W: Write, O: FmtOpts>(
+    fmt: &mut fmt::Formatter<W, O>,
+) -> DebugMap<'_, W, O> {
     let result = fmt.write_str("{");
     DebugMap {
         fmt,

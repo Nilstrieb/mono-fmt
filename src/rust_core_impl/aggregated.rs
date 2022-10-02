@@ -8,7 +8,7 @@ mod impl_prelude {
 
 impl<T: Debug, const N: usize> Debug for [T; N] {
     fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-        <[T] as Debug>::fmt(&&self[..], f)
+        <[T] as Debug>::fmt(&self[..], f)
     }
 }
 
