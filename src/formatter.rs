@@ -29,6 +29,14 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         self.buf.write_str(str)
     }
 
+    pub fn debug_struct(&mut self, name: &str) -> DebugStruct<'_, W, O> {
+        debug_struct_new(self, name)
+    }
+
+    pub fn debug_tuple(&mut self, name: &str) -> DebugTuple<'_, W, O> {
+        debug_tuple_new(self, name)
+    }
+
     pub fn debug_list(&mut self) -> DebugList<'_, W, O> {
         debug_list_new(self)
     }
@@ -153,7 +161,7 @@ impl<'a, W: Write, O: FmtOpts> DebugStruct<'a, W, O> {
                     self.fmt.write_str(" {\n")?;
                 }
                 let mut slot = None;
-                let mut state = Default::default();
+                let mut state = PadAdapterState::default();
                 let mut writer = PadAdapter::wrap(self.fmt, &mut slot, &mut state);
                 writer.write_str(name)?;
                 writer.write_str(": ")?;
@@ -177,7 +185,7 @@ impl<'a, W: Write, O: FmtOpts> DebugStruct<'a, W, O> {
             if self.has_fields {
                 if self.is_pretty() {
                     let mut slot = None;
-                    let mut state = Default::default();
+                    let mut state = PadAdapterState::default();
                     let mut writer = PadAdapter::wrap(self.fmt, &mut slot, &mut state);
                     writer.write_str("..\n")?;
                     self.fmt.write_str("}")
@@ -239,7 +247,7 @@ impl<'a, W: Write, O: FmtOpts> DebugTuple<'a, W, O> {
                     self.fmt.write_str("(\n")?;
                 }
                 let mut slot = None;
-                let mut state = Default::default();
+                let mut state = PadAdapterState::default();
                 let mut writer = PadAdapter::wrap(self.fmt, &mut slot, &mut state);
                 value.fmt(&mut writer)?;
                 writer.write_str(",\n")
@@ -285,13 +293,13 @@ impl<'a, W: Write, O: FmtOpts> DebugInner<'a, W, O> {
                     self.fmt.write_str("\n")?;
                 }
                 let mut slot = None;
-                let mut state = Default::default();
+                let mut state = PadAdapterState::default();
                 let mut writer = PadAdapter::wrap(self.fmt, &mut slot, &mut state);
                 entry.fmt(&mut writer)?;
                 writer.write_str(",\n")
             } else {
                 if self.has_fields {
-                    self.fmt.write_str(", ")?
+                    self.fmt.write_str(", ")?;
                 }
                 entry.fmt(self.fmt)
             }
@@ -411,7 +419,7 @@ pub(super) fn debug_map_new<W: Write, O: FmtOpts>(
         result,
         has_fields: false,
         has_key: false,
-        state: Default::default(),
+        state: PadAdapterState::default(),
     }
 }
 
@@ -433,13 +441,13 @@ impl<'a, W: Write, O: FmtOpts> DebugMap<'a, W, O> {
                     self.fmt.write_str("\n")?;
                 }
                 let mut slot = None;
-                self.state = Default::default();
+                self.state = PadAdapterState::default();
                 let mut writer = PadAdapter::wrap(self.fmt, &mut slot, &mut self.state);
                 key.fmt(&mut writer)?;
                 writer.write_str(": ")?;
             } else {
                 if self.has_fields {
-                    self.fmt.write_str(", ")?
+                    self.fmt.write_str(", ")?;
                 }
                 key.fmt(self.fmt)?;
                 self.fmt.write_str(": ")?;

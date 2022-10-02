@@ -75,8 +75,7 @@ impl ToTokens for Scoped<'_, Format<'_>> {
         let idents = pos_idents.chain(named_idents);
 
         tokens.extend(quote! {
-            #[allow(unused_parens)]
-            match (#(&#args),*) {
+            match { #[allow(unused_parens)] (#(&#args),*) } {
                 (#(#idents),*) => (
                     #(#parts),*
                 )

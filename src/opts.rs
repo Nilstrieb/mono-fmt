@@ -39,7 +39,7 @@ macro_rules! options {
 
             /// # Example
             /// `Self` is `WithAlternate<WithFill<(), ' '>>`
-            /// `Other` is WithMinus<()>
+            /// `Other` is `WithMinus<()>`
             ///
             /// This returns `WithAlternate<WithFille<WithMinus<()>, ' '>>`
             ///

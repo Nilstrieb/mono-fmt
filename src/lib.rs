@@ -1,5 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(dead_code)]
+#![warn(clippy::pedantic)]
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    clippy::wildcard_imports,
+    clippy::module_name_repetitions,
+    clippy::single_match_else,
+)]
 
 extern crate alloc;
 
@@ -115,17 +122,17 @@ mod tests {
     }
 }
 
+/// this should really not end up in the final code lmao
+#[doc(hidden)]
 pub mod uwu {
+    #![allow(dead_code)]
     use std::cell::Cell;
 
     fn test_expansion() {
         let evil = Cell::new(0);
-        format!(
-            "{0}{0}",
-            {
-                evil.set(evil.get() + 1);
-                0
-            },
-        );
+        format!("{0}{0}", {
+            evil.set(evil.get() + 1);
+            0
+        },);
     }
 }

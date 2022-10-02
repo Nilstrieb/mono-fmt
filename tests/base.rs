@@ -50,3 +50,8 @@ fn ptr_correct_addr() {
 
     assert_eq!(addr, fmt);
 }
+
+#[test]
+fn temporaries() {
+    let _ = format_args!("{}", { "owo".to_string() });
+}

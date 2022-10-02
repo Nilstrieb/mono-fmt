@@ -20,29 +20,33 @@ impl<T: Debug> Debug for [T] {
 
 // pointers
 mod pointers {
+    use core::ptr;
+
     use super::impl_prelude::*;
 
     impl<T: ?Sized> Pointer for *const T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-            pointer_fmt_inner((*self as *const ()) as usize, f)
+            pointer_fmt_inner((*self).cast::<()>() as usize, f)
         }
     }
 
     impl<T: ?Sized> Pointer for *mut T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-            pointer_fmt_inner((*self as *mut ()) as usize, f)
+            pointer_fmt_inner((*self).cast::<()>() as usize, f)
         }
     }
 
     impl<T: ?Sized> Pointer for &T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-            Pointer::fmt(&(*self as *const T), f)
+            let ptr: *const T = ptr::addr_of!(**self);
+            pointer_fmt_inner(ptr.cast::<()>() as usize, f)
         }
     }
 
     impl<T: ?Sized> Pointer for &mut T {
         fn fmt<W: Write, O: FmtOpts>(&self, f: &mut Formatter<W, O>) -> Result {
-            Pointer::fmt(&(&**self as *const T), f)
+            let ptr: *const T = ptr::addr_of!(**self);
+            pointer_fmt_inner(ptr.cast::<()>() as usize, f)
         }
     }
 

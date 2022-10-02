@@ -1,5 +1,7 @@
 //! Copied modified stuff from core
 
+#![allow(dead_code)]
+
 mod aggregated;
 mod num;
 
@@ -135,6 +137,23 @@ impl PostPadding {
 
 impl<W: Write, O: FmtOpts> Formatter<W, O> {
     fn pad_integral(&mut self, is_nonnegative: bool, prefix: &str, buf: &str) -> Result {
+        // Writes the sign if it exists, and then the prefix if it was requested
+        #[inline(never)]
+        fn write_prefix<W: Write, O>(
+            f: &mut Formatter<W, O>,
+            sign: Option<char>,
+            prefix: Option<&str>,
+        ) -> Result {
+            if let Some(c) = sign {
+                f.buf.write_char(c)?;
+            }
+            if let Some(prefix) = prefix {
+                f.buf.write_str(prefix)
+            } else {
+                Ok(())
+            }
+        }
+
         let mut width = buf.len();
 
         let mut sign = None;
@@ -152,23 +171,6 @@ impl<W: Write, O: FmtOpts> Formatter<W, O> {
         } else {
             None
         };
-
-        // Writes the sign if it exists, and then the prefix if it was requested
-        #[inline(never)]
-        fn write_prefix<W: Write, O>(
-            f: &mut Formatter<W, O>,
-            sign: Option<char>,
-            prefix: Option<&str>,
-        ) -> Result {
-            if let Some(c) = sign {
-                f.buf.write_char(c)?;
-            }
-            if let Some(prefix) = prefix {
-                f.buf.write_str(prefix)
-            } else {
-                Ok(())
-            }
-        }
 
         // The `width` field is more of a `min-width` parameter at this point.
         match self.width() {
