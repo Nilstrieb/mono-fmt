@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
@@ -15,6 +15,14 @@ pub(crate) struct Scoped<'a, T> {
     input: &'a Input,
     current_position: &'a Cell<usize>,
     inner: &'a T,
+}
+
+fn pos_arg_ident(idx: usize) -> Ident {
+    Ident::new(&format!("__pos_arg_{idx}"), Span::mixed_site())
+}
+
+fn named_arg_ident(name: impl std::fmt::Display) -> Ident {
+    Ident::new(&format!("__named_arg_{name}"), Span::mixed_site())
 }
 
 impl<'a, T> Scoped<'a, T> {
@@ -46,10 +54,33 @@ impl ToTokens for Scoped<'_, Format<'_>> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let parts = self.inner.pieces.iter().map(|piece| self.scope(piece));
 
+        let input = &self.input;
+
+        let pos_args = input.positional_args.iter();
+        let named_args = input.named_args.iter().map(|(_, expr)| expr);
+
+        let args = pos_args.chain(named_args);
+
+        let pos_idents = input
+            .positional_args
+            .iter()
+            .enumerate()
+            .map(|(idx, _)| pos_arg_ident(idx));
+
+        let named_idents = input
+            .named_args
+            .iter()
+            .map(|(name, _)| named_arg_ident(name));
+
+        let idents = pos_idents.chain(named_idents);
+
         tokens.extend(quote! {
-            (
-                #(#parts),*
-            )
+            #[allow(unused_parens)]
+            match (#(#args),*) {
+                (#(#idents),*) => (
+                    #(#parts),*
+                )
+            }
         })
     }
 }
@@ -80,20 +111,16 @@ impl ToTokens for Scoped<'_, FormatArg<'_>> {
                 let current_position = self.current_position.get();
                 self.current_position.set(current_position + 1);
 
-                self.input.positional_args[current_position].to_token_stream()
+                pos_arg_ident(current_position)
             }
-            Some(FormatArgRef::Positional(idx)) => {
-                self.input.positional_args[idx].to_token_stream()
-            }
+            Some(FormatArgRef::Positional(idx)) => pos_arg_ident(idx),
             Some(FormatArgRef::Named(name)) => self
                 .input
                 .named_args
                 .iter()
                 .find(|(arg, _)| arg == name)
-                .map(|(_, expr)| expr.to_token_stream())
-                .unwrap_or_else(|| {
-                    Ident::new(name, self.input.format_str.span()).to_token_stream()
-                }),
+                .map(|(name, _)| named_arg_ident(name))
+                .unwrap_or_else(|| Ident::new(name, self.input.format_str.span())),
         };
 
         let opt_ty = opt_ty_tokens(self.scope(&self.inner.format_spec.formatter_args));

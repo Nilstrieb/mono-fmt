@@ -116,8 +116,19 @@ mod tests {
 }
 
 pub mod uwu {
-    fn test_format_debug_hex() {
-        assert_eq!(format!("{:02x?}", b"Foo\0"), "[46, 6f, 6f, 00]");
-        assert_eq!(format!("{:02X?}", b"Foo\0"), "[46, 6F, 6F, 00]");
+    use std::cell::Cell;
+
+    fn test_expansion() {
+        let evil = Cell::new(0);
+        format!(
+            "{0}{0}{1}{owo}",
+            {
+                evil.set(evil.get() + 1);
+                0
+            },
+            5,
+            owo = "owo",
+        );
+        // assert_eq!(evil.get(), 1);
     }
 }

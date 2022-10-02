@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 #[macro_use]
 extern crate mono_fmt;
 
@@ -16,4 +18,14 @@ fn test_pointer_formats_data_pointer() {
     let s: &str = "";
     assert_eq!(format!("{s:p}"), format!("{:p}", s.as_ptr()));
     assert_eq!(format!("{b:p}"), format!("{:p}", b.as_ptr()));
+}
+
+#[test]
+fn only_eval_once() {
+    let evil = Cell::new(0);
+    let _ = format!("{0} {0}", {
+        evil.set(evil.get() + 1);
+        0
+    });
+    assert_eq!(evil.get(), 1);
 }
