@@ -99,10 +99,10 @@ fn test_format_int() {
     assert_eq!(format!("{:X}", 55), "37");
     assert_eq!(format!("{:e}", 55), "5.5e1");
     assert_eq!(format!("{:E}", 55), "5.5E1");
-    assert_eq!(format!("{:e}", 10000000000u64), "1e10");
-    assert_eq!(format!("{:E}", 10000000000u64), "1E10");
-    assert_eq!(format!("{:e}", 10000000001u64), "1.0000000001e10");
-    assert_eq!(format!("{:E}", 10000000001u64), "1.0000000001E10");
+    assert_eq!(format!("{:e}", 10_000_000_000_u64), "1e10");
+    assert_eq!(format!("{:E}", 10_000_000_000_u64), "1E10");
+    assert_eq!(format!("{:e}", 10_000_000_001_u64), "1.0000000001e10");
+    assert_eq!(format!("{:E}", 10_000_000_001_u64), "1.0000000001E10");
 }
 
 #[test]

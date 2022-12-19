@@ -45,7 +45,7 @@ fn dont_move() {
 #[test]
 fn ptr_correct_addr() {
     static STATIC: u8 = 0;
-    let addr = std::format!("{:p}", (&STATIC) as *const u8);
+    let addr = std::format!("{:p}", std::ptr::addr_of!(STATIC));
     let fmt = format!("{:p}", &STATIC);
 
     assert_eq!(addr, fmt);

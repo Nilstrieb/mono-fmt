@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn number() {
-        let result = format!("a: {}", 32523532u64);
+        let result = format!("a: {}", 32_523_532_u64);
         assert_eq!(result, "a: 32523532");
     }
 
